@@ -1,0 +1,43 @@
+{
+  "@context": ["https://loopledger.org/schema/v0.1/context.jsonld"],
+  "@type": "Passport",
+  "asset_id": "ast_01JC8K2M4N6P8R0T2V4X6Z8A05",
+  "passport_id": "LL-SITE1-000105",
+  "tenant_id": "acme-hospitality",
+  "kind": "unit",
+  "class_name": "Booth module, 2-seat",
+  "sku": "BTH-2S",
+  "catalog_ref": { "catalog_id": "BTH-2S", "version": 1, "supersedes": "G4" },
+  "revision": { "basis": "declared", "label": "G5" },
+  "components": [
+    { "component_id": "frame", "material": "https://loopledger.org/vocab/material/steel", "mass_kg": 91.6, "qty": 1 },
+    { "component_id": "seat", "material": "https://loopledger.org/vocab/material/plywood", "mass_kg": 67.6, "qty": 1 },
+    { "component_id": "back", "material": "https://loopledger.org/vocab/material/plywood", "mass_kg": 20, "qty": 1 },
+    { "component_id": "upholstery", "material": "https://loopledger.org/vocab/material/vinyl", "mass_kg": 38.8, "qty": 1 }
+  ],
+  "joints": [
+    { "joint_id": "j-1", "type": "https://loopledger.org/vocab/joint_type/bolted", "between": ["frame", "seat"], "count": 4, "reversible": true, "tool": "10 mm socket" },
+    { "joint_id": "j-2", "type": "https://loopledger.org/vocab/joint_type/bolted", "between": ["frame", "back"], "count": 4, "reversible": true, "tool": "10 mm socket" },
+    { "joint_id": "j-3", "type": "https://loopledger.org/vocab/joint_type/screwed", "between": ["seat", "upholstery"], "count": 6, "reversible": true, "tool": "T20 driver" },
+    { "joint_id": "j-4", "type": "https://loopledger.org/vocab/joint_type/screwed", "between": ["back", "upholstery"], "count": 6, "reversible": true, "tool": "T20 driver" }
+  ],
+  "composition": [
+    { "material": "https://loopledger.org/vocab/material/steel", "mass_pct": 42 },
+    { "material": "https://loopledger.org/vocab/material/plywood", "mass_pct": 31 },
+    { "material": "https://loopledger.org/vocab/material/vinyl", "mass_pct": 18 },
+    { "material": "https://loopledger.org/vocab/material/foam", "mass_pct": 9 }
+  ],
+  "dimensions": { "length_cm": 122, "width_cm": 62, "height_cm": 110 },
+  "connect_spec": "quick-connect dock type 2",
+  "recovery_method": [
+    { "method": "intact", "cluster": "dining-room-north", "sequence": ["j-3", "j-4", "j-1", "j-2"], "tools": ["10 mm socket", "T20 driver"], "crew_size": 2, "declared_labor_min": 40 }
+  ],
+  "design_ref": [{ "scheme": "part_number", "value": "BTH-2S-G5" }],
+  "controlled": { "value": false },
+  "origin": { "site_id": "SITE1", "installed_on": "2024-06-02", "source_event": "evt_01JC8K2M4N6P8R0T2V4X6Z8B21" },
+  "owner": { "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P04", "name": "Second Life Diner Co.", "record_access": "full" },
+  "manufacturer": { "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P08", "name": "Booth Makers Ltd." },
+  "designer": { "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P09", "name": "Booth Makers Design" },
+  "status": "removed",
+  "lifecycle": { "life_used_pct": 30, "life_number": 1, "loop_route": "reuse" }
+}

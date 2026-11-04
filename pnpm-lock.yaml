@@ -33,6 +33,21 @@ importers:
 
   packages/corpus: {}
 
+  packages/drill:
+    dependencies:
+      '@loopledger/adapter-memory':
+        specifier: workspace:*
+        version: link:../adapters/memory
+      '@loopledger/ledger':
+        specifier: workspace:*
+        version: link:../ledger
+      '@loopledger/ports':
+        specifier: workspace:*
+        version: link:../ports
+      '@loopledger/spec':
+        specifier: workspace:*
+        version: link:../spec
+
   packages/ledger:
     dependencies:
       '@loopledger/ports':

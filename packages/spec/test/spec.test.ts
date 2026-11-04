@@ -160,6 +160,35 @@ describe("REQ-PASSPORT-002 revision basis is declared, observed or unknown", () 
   });
 });
 
+describe("REQ-PASSPORT-008 catalog item recovery method and design reference", () => {
+  const g5 = read("examples/booth-2s-g5.passport.json");
+
+  it("validates the G4 and G5 examples, G5 superseding G4 with screwed upholstery joints", () => {
+    expect(passportOk(booth)).toBe(true);
+    expect(passportOk(g5)).toBe(true);
+    expect(g5.catalog_ref.supersedes).toBe(booth.revision.label);
+    expect(g5.joints.filter((j: Json) => j.type.endsWith("/screwed"))).toHaveLength(2);
+  });
+
+  it("rejects a recovery method without a declared labor figure or with an unknown method", () => {
+    const open = copy(g5);
+    delete open.recovery_method[0].declared_labor_min;
+    expect(passportOk(open)).toBe(false);
+    const unknown = copy(g5);
+    unknown.recovery_method[0].method = "shred";
+    expect(passportOk(unknown)).toBe(false);
+  });
+
+  it("rejects a design reference with an unknown scheme or no value", () => {
+    const scheme = copy(g5);
+    scheme.design_ref[0].scheme = "napkin";
+    expect(passportOk(scheme)).toBe(false);
+    const empty = copy(g5);
+    empty.design_ref[0].value = "";
+    expect(passportOk(empty)).toBe(false);
+  });
+});
+
 describe("REQ-PASSPORT-003 assembly, joint and composition shape", () => {
   it("rejects a joint that is not between exactly two components, or has no reversibility", () => {
     const three = copy(booth);

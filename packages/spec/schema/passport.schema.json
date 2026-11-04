@@ -30,6 +30,8 @@
     "dimensions": { "$ref": "#/$defs/dimensions" },
     "condition_grade": { "enum": ["A", "B", "C"] },
     "connect_spec": { "type": "string", "minLength": 1 },
+    "recovery_method": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/recovery_method" } },
+    "design_ref": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/design_ref" } },
     "controlled": { "$ref": "#/$defs/controlled" },
     "origin": { "$ref": "#/$defs/origin" },
     "carrier": { "$ref": "#/$defs/carrier" },
@@ -75,6 +77,30 @@
         "catalog_id": { "type": "string", "minLength": 1 },
         "version": { "type": "integer", "minimum": 1 },
         "supersedes": { "type": "string", "minLength": 1 }
+      }
+    },
+    "recovery_method": {
+      "$comment": "One entry per method (SPEC-data-model.md §2 CATALOG_ITEM). declared_labor_min is the designer's or supplier's estimate; the planner prefers the measured figure once its cohort qualifies.",
+      "type": "object",
+      "required": ["method", "declared_labor_min"],
+      "additionalProperties": false,
+      "properties": {
+        "method": { "enum": ["intact", "destructive"] },
+        "cluster": { "type": "string", "minLength": 1 },
+        "sequence": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "tools": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "crew_size": { "type": "integer", "minimum": 1 },
+        "declared_labor_min": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    },
+    "design_ref": {
+      "$comment": "How a feedback adapter finds the object in the design tool: an IFC type GUID, a bSDD class or a CAD/PLM part number.",
+      "type": "object",
+      "required": ["scheme", "value"],
+      "additionalProperties": false,
+      "properties": {
+        "scheme": { "enum": ["ifc_type_guid", "bsdd_class", "part_number"] },
+        "value": { "type": "string", "minLength": 1 }
       }
     },
     "revision": {

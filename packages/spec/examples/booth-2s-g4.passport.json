@@ -35,6 +35,11 @@
   "dimensions": { "length_cm": 122, "width_cm": 62, "height_cm": 110 },
   "condition_grade": "B",
   "connect_spec": "quick-connect dock type 2",
+  "recovery_method": [
+    { "method": "intact", "cluster": "dining-room-north", "sequence": ["j-1", "j-2", "j-3", "j-4"], "tools": ["10 mm socket", "heat gun"], "crew_size": 3, "declared_labor_min": 70 },
+    { "method": "destructive", "cluster": "dining-room-north", "crew_size": 2, "declared_labor_min": 30 }
+  ],
+  "design_ref": [{ "scheme": "part_number", "value": "BTH-2S-G4" }],
   "controlled": { "value": false },
   "origin": { "site_id": "SITE1", "installed_on": "2019-03-14", "source_event": "evt_01JC8K2M4N6P8R0T2V4X6Z8B01" },
   "carrier": {
