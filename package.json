@@ -1,0 +1,21 @@
+{
+  "name": "loopledger",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.13.0",
+  "scripts": {
+    "trace": "tsx scripts/trace.ts",
+    "check-mirror": "tsx scripts/check-mirror.ts",
+    "test": "vitest run",
+    "typecheck": "tsc"
+  },
+  "dependencies": {
+    "@lemur-labs/kit": "0.113.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5"
+  }
+}

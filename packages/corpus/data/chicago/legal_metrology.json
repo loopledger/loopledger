@@ -1,0 +1,12 @@
+[
+  {
+    "jurisdiction": "Chicago",
+    "category": "legal_metrology",
+    "rule": "Commercial weight claims may require certified scales. The Illinois and Chicago requirements are not yet sourced.",
+    "effective_from": null,
+    "pinpoint_citation": null,
+    "confidence": "low",
+    "extracted_by": "claude-sonnet-5-5",
+    "status": "draft"
+  }
+]

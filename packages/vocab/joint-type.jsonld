@@ -1,0 +1,21 @@
+{
+  "@context": {
+    "@vocab": "https://loopledger.org/ns/v0.1#",
+    "skos": "http://www.w3.org/2004/02/skos/core#",
+    "label": "skos:prefLabel",
+    "terms": { "@id": "skos:hasTopConcept", "@container": "@set" }
+  },
+  "@id": "https://loopledger.org/vocab/joint_type/v0.1",
+  "@type": "skos:ConceptScheme",
+  "$comment": "Community Specification License 1.0 (LL-002). Changed only through the RFC process (GOVERNANCE.md); a change is a new version. Every term is a draft and external_refs is empty: a bSDD class or ISO 20887 principle is added only once verified (#33).",
+  "scheme": "joint_type",
+  "version": "0.1",
+  "terms": [
+    { "@id": "https://loopledger.org/vocab/joint_type/bonded", "term_id": "bonded", "scheme": "joint_type", "label": "Bonded (adhesive)", "external_refs": [], "status": "draft" },
+    { "@id": "https://loopledger.org/vocab/joint_type/screwed", "term_id": "screwed", "scheme": "joint_type", "label": "Mechanical fastener: screw", "external_refs": [], "status": "draft" },
+    { "@id": "https://loopledger.org/vocab/joint_type/bolted", "term_id": "bolted", "scheme": "joint_type", "label": "Mechanical fastener: bolt", "external_refs": [], "status": "draft" },
+    { "@id": "https://loopledger.org/vocab/joint_type/clipped", "term_id": "clipped", "scheme": "joint_type", "label": "Mechanical fastener: clip", "external_refs": [], "status": "draft" },
+    { "@id": "https://loopledger.org/vocab/joint_type/snap_fit", "term_id": "snap_fit", "scheme": "joint_type", "label": "Snap-fit", "external_refs": [], "status": "draft" },
+    { "@id": "https://loopledger.org/vocab/joint_type/welded", "term_id": "welded", "scheme": "joint_type", "label": "Welded", "external_refs": [], "status": "draft" }
+  ]
+}

@@ -1,0 +1,84 @@
+{
+  "@context": ["https://loopledger.org/schema/v0.1/context.jsonld"],
+  "@type": "Passport",
+  "asset_id": "ast_01JC8K2M4N6P8R0T2V4X6Z8A01",
+  "passport_id": "LL-SITE1-000101",
+  "tenant_id": "acme-hospitality",
+  "kind": "unit",
+  "class_name": "Booth module, 2-seat",
+  "sku": "BTH-2S",
+  "catalog_ref": { "catalog_id": "BTH-2S", "version": 3, "supersedes": "G3" },
+  "revision": { "basis": "declared", "label": "G4" },
+  "components": [
+    { "component_id": "frame", "material": "https://loopledger.org/vocab/material/steel", "mass_kg": 91.6, "qty": 1 },
+    { "component_id": "seat", "material": "https://loopledger.org/vocab/material/plywood", "mass_kg": 67.6, "qty": 1 },
+    { "component_id": "back", "material": "https://loopledger.org/vocab/material/plywood", "mass_kg": 20, "qty": 1 },
+    { "component_id": "upholstery", "material": "https://loopledger.org/vocab/material/vinyl", "mass_kg": 38.8, "qty": 1 }
+  ],
+  "joints": [
+    { "joint_id": "j-1", "type": "https://loopledger.org/vocab/joint_type/bolted", "between": ["frame", "seat"], "count": 4, "reversible": true, "tool": "10 mm socket" },
+    { "joint_id": "j-2", "type": "https://loopledger.org/vocab/joint_type/bolted", "between": ["frame", "back"], "count": 4, "reversible": true, "tool": "10 mm socket" },
+    { "joint_id": "j-3", "type": "https://loopledger.org/vocab/joint_type/bonded", "between": ["seat", "upholstery"], "count": 1, "reversible": false },
+    { "joint_id": "j-4", "type": "https://loopledger.org/vocab/joint_type/bonded", "between": ["back", "upholstery"], "count": 1, "reversible": false }
+  ],
+  "composition": [
+    { "material": "https://loopledger.org/vocab/material/steel", "mass_pct": 42 },
+    { "material": "https://loopledger.org/vocab/material/plywood", "mass_pct": 31 },
+    {
+      "material": "https://loopledger.org/vocab/material/vinyl",
+      "mass_pct": 18,
+      "substances": [{ "cas": "117-81-7", "name": "Bis(2-ethylhexyl) phthalate", "mass_pct": 0.4 }]
+    },
+    { "material": "https://loopledger.org/vocab/material/foam", "mass_pct": 9 }
+  ],
+  "mass": { "value_kg": 218, "basis": "verified", "weighed_event": "evt_01JC8K2M4N6P8R0T2V4X6Z8B07" },
+  "dimensions": { "length_cm": 122, "width_cm": 62, "height_cm": 110 },
+  "condition_grade": "B",
+  "connect_spec": "quick-connect dock type 2",
+  "controlled": { "value": false },
+  "origin": { "site_id": "SITE1", "installed_on": "2019-03-14", "source_event": "evt_01JC8K2M4N6P8R0T2V4X6Z8B01" },
+  "carrier": {
+    "kind": "qr",
+    "identifier": "(01)09506000134352(21)BTH2S000101",
+    "digital_link": "https://id.example.com/01/09506000134352/21/BTH2S000101",
+    "position": "underside of seat, left"
+  },
+  "owner": { "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P04", "name": "Second Life Diner Co.", "record_access": "full" },
+  "manufacturer": { "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P08", "name": "Booth Makers Ltd." },
+  "designer": { "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P09", "name": "Booth Makers Design" },
+  "status": "removed",
+  "lifecycle": { "life_used_pct": 62, "life_number": 1, "loop_route": "remanufacture" },
+  "open_exceptions": [],
+  "data_grants": [
+    {
+      "grant_id": "grant-bth-2s-0001",
+      "tenant_id": "acme-hospitality",
+      "grantee_party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P09",
+      "grantee_role": "designer",
+      "scope": { "catalog_ids": ["BTH-2S"], "revisions": ["G4", "G5"] },
+      "fields": ["performance", "causes", "labor"],
+      "purpose": "Design feedback on bonded versus bolted upholstery",
+      "expires": "2028-12-31T00:00:00Z",
+      "signatures": [
+        {
+          "sig_id": "sig_grant_01",
+          "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P01",
+          "key_id": "did:key:z6MkTenantOperatorKey",
+          "alg": "EdDSA",
+          "signed_hash": "sha256:a1b2c3d4e5f60718a1b2c3d4e5f60718a1b2c3d4e5f60718a1b2c3d4e5f60718",
+          "signed_at": "2026-02-01T09:00:00Z",
+          "role_at_signing": "tenant"
+        },
+        {
+          "sig_id": "sig_grant_02",
+          "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P09",
+          "key_id": "did:key:z6MkDesignerKey",
+          "alg": "EdDSA",
+          "signed_hash": "sha256:a1b2c3d4e5f60718a1b2c3d4e5f60718a1b2c3d4e5f60718a1b2c3d4e5f60718",
+          "signed_at": "2026-02-01T10:00:00Z",
+          "role_at_signing": "grantee"
+        }
+      ]
+    }
+  ]
+}

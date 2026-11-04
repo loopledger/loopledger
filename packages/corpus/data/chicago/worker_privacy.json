@@ -1,0 +1,12 @@
+[
+  {
+    "jurisdiction": "Chicago",
+    "category": "worker_privacy",
+    "rule": "Vision and geofencing that capture workers may implicate Illinois biometric privacy law (BIPA). Pinpoint provisions not yet sourced.",
+    "effective_from": null,
+    "pinpoint_citation": null,
+    "confidence": "low",
+    "extracted_by": "claude-sonnet-5-5",
+    "status": "draft"
+  }
+]

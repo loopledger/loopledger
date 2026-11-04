@@ -1,0 +1,9 @@
+packages:
+  - packages/*
+  - packages/adapters/*
+allowBuilds:
+  esbuild: true
+  protobufjs: false
+minimumReleaseAge: 20160
+minimumReleaseAgeExclude:
+  - "@lemur-labs/*"

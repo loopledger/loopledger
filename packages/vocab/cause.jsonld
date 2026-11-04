@@ -1,0 +1,28 @@
+{
+  "@context": {
+    "@vocab": "https://loopledger.org/ns/v0.1#",
+    "skos": "http://www.w3.org/2004/02/skos/core#",
+    "label": "skos:prefLabel",
+    "terms": { "@id": "skos:hasTopConcept", "@container": "@set" }
+  },
+  "@id": "https://loopledger.org/vocab/cause/v0.1",
+  "@type": "skos:ConceptScheme",
+  "$comment": "Community Specification License 1.0 (LL-002). Codes and tags are from docs/kickoff/SPEC-data-model.md §3. The two 'partly' codes (wear_beyond_refurb, contamination) are true: they are design signal as rates per revision, and filtering out single incidents belongs in the projection, not the vocabulary. Changed only through the RFC process (GOVERNANCE.md); a change is a new version.",
+  "scheme": "cause",
+  "version": "0.1",
+  "terms": [
+    { "@id": "https://loopledger.org/vocab/cause/bonded_joint", "term_id": "bonded_joint", "scheme": "cause", "label": "Bonded joint", "external_refs": [], "design_addressable": true, "status": "draft" },
+    { "@id": "https://loopledger.org/vocab/cause/non_reversible_fastener", "term_id": "non_reversible_fastener", "scheme": "cause", "label": "Non-reversible fastener", "external_refs": [], "design_addressable": true, "status": "draft" },
+    { "@id": "https://loopledger.org/vocab/cause/inseparable_materials", "term_id": "inseparable_materials", "scheme": "cause", "label": "Inseparable materials", "external_refs": [], "design_addressable": true, "status": "draft" },
+    { "@id": "https://loopledger.org/vocab/cause/connect_spec_obsolete", "term_id": "connect_spec_obsolete", "scheme": "cause", "label": "Connection specification obsolete", "external_refs": [], "design_addressable": true, "status": "draft" },
+    { "@id": "https://loopledger.org/vocab/cause/part_unavailable", "term_id": "part_unavailable", "scheme": "cause", "label": "Part unavailable", "external_refs": [], "design_addressable": true, "status": "draft" },
+    { "@id": "https://loopledger.org/vocab/cause/hazmat_in_composition", "term_id": "hazmat_in_composition", "scheme": "cause", "label": "Hazardous material in composition", "external_refs": [], "design_addressable": true, "status": "draft" },
+    { "@id": "https://loopledger.org/vocab/cause/access_blocked", "term_id": "access_blocked", "scheme": "cause", "label": "Access to the joint blocked", "external_refs": [], "design_addressable": true, "status": "draft" },
+    { "@id": "https://loopledger.org/vocab/cause/wear_beyond_refurb", "term_id": "wear_beyond_refurb", "scheme": "cause", "label": "Wear beyond refurbishment", "external_refs": [], "design_addressable": true, "status": "draft" },
+    { "@id": "https://loopledger.org/vocab/cause/contamination", "term_id": "contamination", "scheme": "cause", "label": "Contamination", "external_refs": [], "design_addressable": true, "status": "draft" },
+    { "@id": "https://loopledger.org/vocab/cause/removal_damage", "term_id": "removal_damage", "scheme": "cause", "label": "Damage during removal", "external_refs": [], "design_addressable": false, "status": "draft" },
+    { "@id": "https://loopledger.org/vocab/cause/window_capacity", "term_id": "window_capacity", "scheme": "cause", "label": "Window capacity", "external_refs": [], "design_addressable": false, "status": "draft" },
+    { "@id": "https://loopledger.org/vocab/cause/no_receiver", "term_id": "no_receiver", "scheme": "cause", "label": "No receiver", "external_refs": [], "design_addressable": false, "status": "draft" },
+    { "@id": "https://loopledger.org/vocab/cause/constraint_forbids", "term_id": "constraint_forbids", "scheme": "cause", "label": "Constraint forbids", "external_refs": [], "design_addressable": false, "status": "draft" }
+  ]
+}

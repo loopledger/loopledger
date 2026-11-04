@@ -1,0 +1,12 @@
+[
+  {
+    "jurisdiction": "Chicago",
+    "category": "diversion_mandate",
+    "rule": "Chicago has a construction and demolition debris recycling ordinance that requires diversion. Its thresholds, rates and effective date are not yet sourced.",
+    "effective_from": null,
+    "pinpoint_citation": null,
+    "confidence": "low",
+    "extracted_by": "claude-sonnet-5-5",
+    "status": "draft"
+  }
+]

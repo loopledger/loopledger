@@ -1,0 +1,473 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://loopledger.org/schema/v0.1/event.schema.json",
+  "title": "LoopLedger event envelope and typed payloads v0.1",
+  "$comment": "Community Specification License 1.0 (LL-002). The signature counts in the signer allOf entries below repeat REQUIRED_SIGNERS in src/signers.ts; a test fails if they differ. An event stays held until its required signatures are complete, so the signer rules bind only when held is false. Labor fields measure the asset and its crew size, never a worker: payloads reject unknown keys, so no field can key labor to an individual.",
+  "type": "object",
+  "required": ["@context", "@type", "event_id", "tenant_id", "type", "occurred_at", "recorded_at", "asset_ids", "payload", "signatures", "held"],
+  "additionalProperties": false,
+  "properties": {
+    "@context": {
+      "type": "array",
+      "contains": { "const": "https://loopledger.org/schema/v0.1/context.jsonld" },
+      "items": { "type": ["string", "object"] }
+    },
+    "@type": { "const": "Event" },
+    "event_id": { "$ref": "passport.schema.json#/$defs/event_id" },
+    "tenant_id": { "type": "string", "minLength": 1 },
+    "recovery_event_id": { "type": "string", "minLength": 1 },
+    "site_id": { "type": "string", "minLength": 1 },
+    "asset_ids": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "passport.schema.json#/$defs/asset_id" } },
+    "type": {
+      "enum": [
+        "asset_born", "carrier_attached", "observed", "identity_resolved", "route_proposed", "route_confirmed", "route_fallback",
+        "removed", "custody_transferred", "weighed", "processed", "maintained", "disposition_final", "record_transferred",
+        "exception_opened", "exception_updated", "exception_closed", "gate_passed", "telemetry", "rule_version_applied"
+      ]
+    },
+    "occurred_at": { "$ref": "passport.schema.json#/$defs/timestamp" },
+    "recorded_at": { "$ref": "passport.schema.json#/$defs/timestamp" },
+    "payload": { "type": "object" },
+    "rule_version_ids": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "factor_set_version": { "type": "string", "minLength": 1 },
+    "correction_of": { "$ref": "passport.schema.json#/$defs/event_id" },
+    "held": { "type": "boolean" },
+    "signatures": { "type": "array", "items": { "$ref": "#/$defs/signature" } },
+    "evidence": { "type": "array", "items": { "$ref": "#/$defs/evidence" } }
+  },
+  "allOf": [
+    {
+      "$comment": "A design-addressable cause needs photo evidence of the joint or material at fault.",
+      "if": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "properties": { "cause": { "type": "object", "properties": { "design_addressable": { "const": true } }, "required": ["design_addressable"] } },
+            "required": ["cause"]
+          }
+        },
+        "required": ["payload"]
+      },
+      "then": {
+        "required": ["evidence"],
+        "properties": { "evidence": { "contains": { "properties": { "kind": { "const": "photo" } }, "required": ["kind"] } } }
+      }
+    },
+    { "if": { "properties": { "type": { "const": "asset_born" } }, "required": ["type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_asset_born" } } } },
+    { "if": { "properties": { "type": { "const": "carrier_attached" } }, "required": ["type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_carrier_attached" } } } },
+    { "if": { "properties": { "type": { "const": "observed" } }, "required": ["type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_observed" } } } },
+    { "if": { "properties": { "type": { "const": "identity_resolved" } }, "required": ["type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_identity_resolved" } } } },
+    { "if": { "properties": { "type": { "const": "route_proposed" } }, "required": ["type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_route_proposed" } } } },
+    { "if": { "properties": { "type": { "const": "route_confirmed" } }, "required": ["type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_route_confirmed" } } } },
+    { "if": { "properties": { "type": { "const": "route_fallback" } }, "required": ["type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_route_fallback" } } } },
+    { "if": { "properties": { "type": { "const": "removed" } }, "required": ["type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_removed" } } } },
+    { "if": { "properties": { "type": { "const": "custody_transferred" } }, "required": ["type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_custody_transferred" } } } },
+    { "if": { "properties": { "type": { "const": "weighed" } }, "required": ["type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_weighed" } } } },
+    { "if": { "properties": { "type": { "const": "processed" } }, "required": ["type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_processed" } } } },
+    { "if": { "properties": { "type": { "const": "maintained" } }, "required": ["type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_maintained" } } } },
+    { "if": { "properties": { "type": { "const": "disposition_final" } }, "required": ["type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_disposition_final" } } } },
+    { "if": { "properties": { "type": { "const": "record_transferred" } }, "required": ["type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_record_transferred" } } } },
+    { "if": { "properties": { "type": { "enum": ["exception_opened", "exception_updated", "exception_closed"] } }, "required": ["type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_exception" } } } },
+    { "if": { "properties": { "type": { "const": "gate_passed" } }, "required": ["type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_gate_passed" } } } },
+    { "if": { "properties": { "type": { "const": "telemetry" } }, "required": ["type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_telemetry" } } } },
+    { "if": { "properties": { "type": { "const": "rule_version_applied" } }, "required": ["type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_rule_version_applied" } } } },
+
+    {
+      "if": { "properties": { "type": { "const": "asset_born" }, "held": { "const": false } }, "required": ["type", "held"] },
+      "then": { "properties": { "signatures": { "minItems": 1, "contains": { "properties": { "role_at_signing": { "enum": ["adapter", "operator"] } }, "required": ["role_at_signing"] } } } }
+    },
+    {
+      "if": { "properties": { "type": { "const": "carrier_attached" }, "held": { "const": false } }, "required": ["type", "held"] },
+      "then": { "properties": { "signatures": { "minItems": 1, "contains": { "properties": { "role_at_signing": { "enum": ["operator", "manufacturer"] } }, "required": ["role_at_signing"] } } } }
+    },
+    {
+      "if": { "properties": { "type": { "const": "observed" }, "held": { "const": false } }, "required": ["type", "held"] },
+      "then": { "properties": { "signatures": { "minItems": 1, "contains": { "properties": { "role_at_signing": { "enum": ["adapter"] } }, "required": ["role_at_signing"] } } } }
+    },
+    {
+      "if": { "properties": { "type": { "const": "identity_resolved" }, "held": { "const": false } }, "required": ["type", "held"] },
+      "then": { "properties": { "signatures": { "minItems": 1, "contains": { "properties": { "role_at_signing": { "enum": ["system"] } }, "required": ["role_at_signing"] } } } }
+    },
+    {
+      "if": { "properties": { "type": { "const": "route_proposed" }, "held": { "const": false } }, "required": ["type", "held"] },
+      "then": { "properties": { "signatures": { "minItems": 1, "contains": { "properties": { "role_at_signing": { "enum": ["system"] } }, "required": ["role_at_signing"] } } } }
+    },
+    {
+      "if": { "properties": { "type": { "const": "route_confirmed" }, "held": { "const": false } }, "required": ["type", "held"] },
+      "then": {
+        "properties": {
+          "signatures": {
+            "minItems": 2,
+            "allOf": [
+              { "contains": { "properties": { "role_at_signing": { "const": "operator" } }, "required": ["role_at_signing"] } },
+              { "contains": { "properties": { "role_at_signing": { "const": "receiver" } }, "required": ["role_at_signing"] } }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "type": { "const": "route_fallback" }, "held": { "const": false } }, "required": ["type", "held"] },
+      "then": { "properties": { "signatures": { "minItems": 1, "contains": { "properties": { "role_at_signing": { "enum": ["system"] } }, "required": ["role_at_signing"] } } } }
+    },
+    {
+      "if": { "properties": { "type": { "const": "removed" }, "held": { "const": false } }, "required": ["type", "held"] },
+      "then": {
+        "properties": {
+          "signatures": {
+            "minItems": 2,
+            "allOf": [
+              { "contains": { "properties": { "role_at_signing": { "const": "crew" } }, "required": ["role_at_signing"] } },
+              { "contains": { "properties": { "role_at_signing": { "const": "operator" } }, "required": ["role_at_signing"] } }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "type": { "const": "custody_transferred" }, "held": { "const": false } }, "required": ["type", "held"] },
+      "then": {
+        "properties": {
+          "signatures": {
+            "minItems": 2,
+            "allOf": [
+              { "contains": { "properties": { "role_at_signing": { "const": "sender" } }, "required": ["role_at_signing"] } },
+              { "contains": { "properties": { "role_at_signing": { "const": "receiver" } }, "required": ["role_at_signing"] } }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "type": { "const": "weighed" }, "held": { "const": false } }, "required": ["type", "held"] },
+      "then": { "properties": { "signatures": { "minItems": 1, "contains": { "properties": { "role_at_signing": { "enum": ["scale"] } }, "required": ["role_at_signing"] } } } }
+    },
+    {
+      "if": { "properties": { "type": { "const": "processed" }, "held": { "const": false } }, "required": ["type", "held"] },
+      "then": { "properties": { "signatures": { "minItems": 1, "contains": { "properties": { "role_at_signing": { "enum": ["facility"] } }, "required": ["role_at_signing"] } } } }
+    },
+    {
+      "if": { "properties": { "type": { "const": "maintained" }, "held": { "const": false } }, "required": ["type", "held"] },
+      "then": { "properties": { "signatures": { "minItems": 1, "contains": { "properties": { "role_at_signing": { "enum": ["maintainer"] } }, "required": ["role_at_signing"] } } } }
+    },
+    {
+      "if": { "properties": { "type": { "const": "disposition_final" }, "held": { "const": false } }, "required": ["type", "held"] },
+      "then": {
+        "properties": {
+          "signatures": {
+            "minItems": 2,
+            "allOf": [
+              { "contains": { "properties": { "role_at_signing": { "const": "receiver" } }, "required": ["role_at_signing"] } },
+              { "contains": { "properties": { "role_at_signing": { "const": "operator" } }, "required": ["role_at_signing"] } }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "type": { "const": "record_transferred" }, "held": { "const": false } }, "required": ["type", "held"] },
+      "then": {
+        "properties": {
+          "signatures": {
+            "minItems": 2,
+            "allOf": [
+              { "contains": { "properties": { "role_at_signing": { "const": "transferring_owner" } }, "required": ["role_at_signing"] } },
+              { "contains": { "properties": { "role_at_signing": { "const": "receiving_owner" } }, "required": ["role_at_signing"] } }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "type": { "enum": ["exception_opened", "exception_updated", "exception_closed"] }, "held": { "const": false } }, "required": ["type", "held"] },
+      "then": { "properties": { "signatures": { "minItems": 1 } } }
+    },
+    {
+      "if": { "properties": { "type": { "const": "gate_passed" }, "held": { "const": false } }, "required": ["type", "held"] },
+      "then": { "properties": { "signatures": { "minItems": 1, "contains": { "properties": { "role_at_signing": { "enum": ["system", "inspector"] } }, "required": ["role_at_signing"] } } } }
+    },
+    {
+      "if": { "properties": { "type": { "const": "telemetry" }, "held": { "const": false } }, "required": ["type", "held"] },
+      "then": { "properties": { "signatures": { "minItems": 1, "contains": { "properties": { "role_at_signing": { "enum": ["device"] } }, "required": ["role_at_signing"] } } } }
+    },
+    {
+      "if": { "properties": { "type": { "const": "rule_version_applied" }, "held": { "const": false } }, "required": ["type", "held"] },
+      "then": { "properties": { "signatures": { "minItems": 1, "contains": { "properties": { "role_at_signing": { "enum": ["system"] } }, "required": ["role_at_signing"] } } } }
+    }
+  ],
+  "$defs": {
+    "signature": {
+      "$comment": "alg is mandatory: crypto-agility is schema law (SPEC-data-model.md §7). No curve is hard-coded.",
+      "type": "object",
+      "required": ["sig_id", "party_id", "key_id", "alg", "signed_hash", "signed_at", "role_at_signing"],
+      "additionalProperties": false,
+      "properties": {
+        "sig_id": { "type": "string", "minLength": 1 },
+        "party_id": { "$ref": "passport.schema.json#/$defs/party_id" },
+        "key_id": { "type": "string", "minLength": 1 },
+        "alg": { "type": "string", "minLength": 1 },
+        "signed_hash": { "$ref": "passport.schema.json#/$defs/sha256" },
+        "signed_at": { "$ref": "passport.schema.json#/$defs/timestamp" },
+        "role_at_signing": { "type": "string", "minLength": 1 }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "required": ["evidence_id", "kind", "content_hash", "storage_ref"],
+      "additionalProperties": false,
+      "properties": {
+        "evidence_id": { "type": "string", "minLength": 1 },
+        "kind": { "enum": ["photo", "scale_ticket", "manifest", "receipt", "cert", "telemetry_snapshot", "doc"] },
+        "content_hash": { "$ref": "passport.schema.json#/$defs/sha256" },
+        "storage_ref": { "type": "string", "minLength": 1 },
+        "captured_by": { "$ref": "passport.schema.json#/$defs/party_id" },
+        "redactions": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "joint_outcome": {
+      "type": "object",
+      "required": ["joint_id", "outcome", "labor_min"],
+      "additionalProperties": false,
+      "properties": {
+        "joint_id": { "type": "string", "minLength": 1 },
+        "outcome": { "enum": ["clean", "damaged", "destroyed"] },
+        "labor_min": { "type": "number", "minimum": 0 }
+      }
+    },
+    "fraction": {
+      "$comment": "Each fraction is weighed: weighed_event points at the signed weighed event.",
+      "type": "object",
+      "required": ["material", "mass_kg", "weighed_event"],
+      "additionalProperties": false,
+      "properties": {
+        "material": { "$ref": "passport.schema.json#/$defs/material_term" },
+        "mass_kg": { "type": "number", "minimum": 0 },
+        "weighed_event": { "$ref": "passport.schema.json#/$defs/event_id" }
+      }
+    },
+    "payload_asset_born": {
+      "type": "object",
+      "required": ["source", "revision"],
+      "additionalProperties": false,
+      "properties": {
+        "source": { "enum": ["procurement", "bim", "first_observation", "separation"] },
+        "catalog_ref": { "$ref": "passport.schema.json#/$defs/catalog_ref" },
+        "revision": { "$ref": "passport.schema.json#/$defs/revision" },
+        "origin": { "$ref": "passport.schema.json#/$defs/origin" },
+        "parent_asset": { "$ref": "passport.schema.json#/$defs/asset_id" }
+      },
+      "if": { "properties": { "source": { "const": "separation" } }, "required": ["source"] },
+      "then": { "required": ["parent_asset"] }
+    },
+    "payload_carrier_attached": {
+      "type": "object",
+      "required": ["carrier"],
+      "additionalProperties": false,
+      "properties": { "carrier": { "$ref": "passport.schema.json#/$defs/carrier" } }
+    },
+    "payload_observed": {
+      "type": "object",
+      "required": ["adapter_kind"],
+      "additionalProperties": false,
+      "properties": {
+        "adapter_kind": { "type": "string", "minLength": 1 },
+        "detections": { "type": "array", "items": { "type": "object" } },
+        "condition_claim": { "enum": ["A", "B", "C"] },
+        "revision_claim": { "$ref": "passport.schema.json#/$defs/revision" },
+        "location": { "type": "string", "minLength": 1 },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "human_confirmed": { "type": "boolean" }
+      }
+    },
+    "payload_identity_resolved": {
+      "type": "object",
+      "required": ["method"],
+      "additionalProperties": false,
+      "properties": {
+        "method": { "enum": ["auto", "manual", "split", "merge"] },
+        "claims_merged": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "child_asset_ids": { "type": "array", "items": { "$ref": "passport.schema.json#/$defs/asset_id" } }
+      }
+    },
+    "payload_route_proposed": {
+      "type": "object",
+      "required": ["scoring_table"],
+      "additionalProperties": false,
+      "properties": {
+        "scoring_table": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["step", "net_value", "carbon_retained_kg", "time_risk"],
+            "additionalProperties": false,
+            "properties": {
+              "step": { "type": "string", "minLength": 1 },
+              "net_value": { "type": "number" },
+              "carbon_retained_kg": { "type": "number" },
+              "time_risk": { "type": "number", "minimum": 0 }
+            }
+          }
+        },
+        "constraints_hit": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "payload_route_confirmed": {
+      "type": "object",
+      "required": ["route", "receiver_party_id", "slot"],
+      "additionalProperties": false,
+      "properties": {
+        "route": { "enum": ["redeploy", "resale", "donate", "recycle", "disposal"] },
+        "receiver_party_id": { "$ref": "passport.schema.json#/$defs/party_id" },
+        "slot": { "type": "string", "format": "date-time" },
+        "fallback_chain": { "type": "array", "items": { "type": "object" } }
+      }
+    },
+    "payload_route_fallback": {
+      "type": "object",
+      "required": ["from_step", "to_step", "trigger"],
+      "additionalProperties": false,
+      "properties": {
+        "from_step": { "type": "string", "minLength": 1 },
+        "to_step": { "type": "string", "minLength": 1 },
+        "trigger": { "enum": ["cutoff", "receiver_withdrew", "constraint_change", "window_capacity", "condition_downgrade"] },
+        "cause": { "$ref": "passport.schema.json#/$defs/cause" }
+      }
+    },
+    "payload_removed": {
+      "type": "object",
+      "required": ["cluster", "method", "started_at", "ended_at", "crew_size"],
+      "additionalProperties": false,
+      "properties": {
+        "cluster": { "type": "string", "minLength": 1 },
+        "method": { "enum": ["intact", "destructive"] },
+        "condition_at_removal": { "enum": ["A", "B", "C"] },
+        "started_at": { "$ref": "passport.schema.json#/$defs/timestamp" },
+        "ended_at": { "$ref": "passport.schema.json#/$defs/timestamp" },
+        "crew_size": { "type": "integer", "minimum": 1 },
+        "joints_opened": { "type": "array", "items": { "$ref": "#/$defs/joint_outcome" } },
+        "cause": { "$ref": "passport.schema.json#/$defs/cause" }
+      }
+    },
+    "payload_custody_transferred": {
+      "type": "object",
+      "required": ["from_party_id", "to_party_id", "mode"],
+      "additionalProperties": false,
+      "properties": {
+        "from_party_id": { "$ref": "passport.schema.json#/$defs/party_id" },
+        "to_party_id": { "$ref": "passport.schema.json#/$defs/party_id" },
+        "mode": { "enum": ["signed", "geofence"] },
+        "vehicle": { "type": "string", "minLength": 1 },
+        "zone": { "type": "string", "minLength": 1 }
+      }
+    },
+    "payload_weighed": {
+      "type": "object",
+      "required": ["mass_kg", "scale_id", "certification_id"],
+      "additionalProperties": false,
+      "properties": {
+        "mass_kg": { "type": "number", "minimum": 0 },
+        "scale_id": { "type": "string", "minLength": 1 },
+        "certification_id": { "type": "string", "minLength": 1 }
+      }
+    },
+    "payload_processed": {
+      "type": "object",
+      "required": ["operation", "before_refs", "after_refs", "labor_min", "crew_size"],
+      "additionalProperties": false,
+      "properties": {
+        "operation": { "enum": ["demark", "re_cover", "refurb", "sort", "separate"] },
+        "before_refs": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+        "after_refs": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+        "labor_min": { "type": "number", "minimum": 0 },
+        "crew_size": { "type": "integer", "minimum": 1 },
+        "joints_opened": { "type": "array", "items": { "$ref": "#/$defs/joint_outcome" } },
+        "fractions": { "type": "array", "items": { "$ref": "#/$defs/fraction" } },
+        "child_asset_ids": { "type": "array", "items": { "$ref": "passport.schema.json#/$defs/asset_id" } },
+        "cause": { "$ref": "passport.schema.json#/$defs/cause" }
+      },
+      "if": { "properties": { "operation": { "const": "separate" } }, "required": ["operation"] },
+      "then": { "required": ["child_asset_ids"], "properties": { "child_asset_ids": { "minItems": 1 } } }
+    },
+    "payload_maintained": {
+      "type": "object",
+      "required": ["operation", "labor_min", "crew_size"],
+      "additionalProperties": false,
+      "properties": {
+        "operation": { "enum": ["repair", "part_replaced", "refurb_in_place"] },
+        "components_touched": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "joints_touched": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "parts_consumed": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "labor_min": { "type": "number", "minimum": 0 },
+        "crew_size": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "payload_disposition_final": {
+      "type": "object",
+      "required": ["family"],
+      "additionalProperties": false,
+      "properties": {
+        "family": { "enum": ["redeploy", "resale", "donate", "recycle", "disposal"] },
+        "receiver_doc_refs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "exception_event_id": { "$ref": "passport.schema.json#/$defs/event_id" },
+        "cause": { "$ref": "passport.schema.json#/$defs/cause" }
+      },
+      "if": { "properties": { "family": { "const": "disposal" } }, "required": ["family"] },
+      "then": { "required": ["exception_event_id", "cause"] }
+    },
+    "payload_record_transferred": {
+      "type": "object",
+      "required": ["from_owner_party_id", "to_owner_party_id", "access"],
+      "additionalProperties": false,
+      "properties": {
+        "from_owner_party_id": { "$ref": "passport.schema.json#/$defs/party_id" },
+        "to_owner_party_id": { "$ref": "passport.schema.json#/$defs/party_id" },
+        "access": { "enum": ["full", "append_observations", "read_only"] },
+        "resolver_delegation": { "type": "string", "format": "uri" }
+      }
+    },
+    "payload_exception": {
+      "type": "object",
+      "required": ["exception_id", "kind", "owner_party_id"],
+      "additionalProperties": false,
+      "properties": {
+        "exception_id": { "type": "string", "minLength": 1 },
+        "kind": { "enum": ["passport_incomplete", "custody_mismatch", "controlled_request", "overdue", "disposal_request"] },
+        "owner_party_id": { "$ref": "passport.schema.json#/$defs/party_id" },
+        "blocking_scope": { "type": "string", "minLength": 1 },
+        "cause": { "$ref": "passport.schema.json#/$defs/cause" }
+      },
+      "if": { "properties": { "kind": { "const": "disposal_request" } }, "required": ["kind"] },
+      "then": { "required": ["cause"] }
+    },
+    "payload_gate_passed": {
+      "type": "object",
+      "required": ["gate", "inputs_snapshot"],
+      "additionalProperties": false,
+      "properties": {
+        "gate": { "enum": ["J-gate", "T-14", "T-7", "T-0", "readiness", "LOTO"] },
+        "inputs_snapshot": { "type": "object" }
+      }
+    },
+    "payload_telemetry": {
+      "type": "object",
+      "required": ["metric", "value", "source_device"],
+      "additionalProperties": false,
+      "properties": {
+        "metric": { "type": "string", "minLength": 1 },
+        "value": { "type": "number" },
+        "source_device": { "type": "string", "minLength": 1 }
+      }
+    },
+    "payload_rule_version_applied": {
+      "type": "object",
+      "required": ["decision_event_id", "rule_version_ids"],
+      "additionalProperties": false,
+      "properties": {
+        "decision_event_id": { "$ref": "passport.schema.json#/$defs/event_id" },
+        "rule_version_ids": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } }
+      }
+    }
+  }
+}

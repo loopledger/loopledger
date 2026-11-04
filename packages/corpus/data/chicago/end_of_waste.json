@@ -1,0 +1,12 @@
+[
+  {
+    "jurisdiction": "Chicago",
+    "category": "end_of_waste",
+    "rule": "Whether removed material is waste or product changes hauler licensing and movement rules. The Chicago and Illinois tests are not yet sourced.",
+    "effective_from": null,
+    "pinpoint_citation": null,
+    "confidence": "low",
+    "extracted_by": "claude-sonnet-5-5",
+    "status": "draft"
+  }
+]
