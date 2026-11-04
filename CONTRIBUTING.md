@@ -28,8 +28,9 @@ Development is private. Each merge to `main` adds one commit to github.com/loopl
 
 Everything else stays private, including `scripts/` and `docs/requirements/`.
 
-Known gaps in the public tree, left to a later issue: `pnpm install` fails there because the root `package.json`
-depends on the private `@lemur-labs/kit`, and its `trace` and `check-mirror` scripts point at the private `scripts/`.
+The published root `package.json` leaves out the private `@lemur-labs/kit` dependency and the scripts that run files
+under the private `scripts/`, and its `pnpm-lock.yaml` is regenerated to match, so `pnpm install` works in the public
+tree.
 
 ## What each kind of contribution needs
 
