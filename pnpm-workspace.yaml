@@ -7,3 +7,4 @@ allowBuilds:
 minimumReleaseAge: 20160
 minimumReleaseAgeExclude:
   - "@lemur-labs/*"
+  - "@lemur-labs/kit@0.114.0"
