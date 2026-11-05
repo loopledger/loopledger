@@ -46,6 +46,21 @@ describe("vocab v0.1", () => {
     });
   });
 
+  it("REQ-VOC-006 maps material terms to bSDD NAAKT 2.5 classes, or an explicit none", () => {
+    const base = "https://identifier.buildingsmart.org/uri/nkt/naakt/2.5/class/";
+    const refs = Object.fromEntries(VOCABULARY.material.terms.map((t) => [t.term_id, t.external_refs]));
+    expect(refs).toEqual({
+      wood: [`${base}hout_generiek_generiek`],
+      plywood: [`${base}hout_multiplex_generiek`],
+      steel: [`${base}metaal_staal_generiek`],
+      aluminium: [`${base}metaal_aluminium_generiek`],
+      plastic: [`${base}kunststof_generiek_generiek`],
+      vinyl: [`${base}kunststof_pvc_generiek`],
+      foam: ["none"],
+      textile: ["none"],
+    });
+  });
+
   it("REQ-VOC-003 tags every cause code with a boolean design_addressable", () => {
     for (const t of VOCABULARY.cause.terms) expect(typeof t.design_addressable).toBe("boolean");
     const no = VOCABULARY.cause.terms.filter((t) => !t.design_addressable).map((t) => t.term_id);
