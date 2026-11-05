@@ -28,9 +28,22 @@ describe("vocab v0.1", () => {
     for (const s of SCHEMES) {
       for (const t of VOCABULARY[s].terms) {
         expect(Array.isArray(t.external_refs)).toBe(true);
-        for (const ref of t.external_refs) expect(ref).toMatch(/^https?:\/\//);
+        for (const ref of t.external_refs) expect(ref).toMatch(/^(https?:\/\/|none$)/);
       }
     }
+  });
+
+  it("REQ-VOC-005 maps joint types to bSDD IFC 4.3 classes, or an explicit none", () => {
+    const base = "https://identifier.buildingsmart.org/uri/buildingsmart/ifc/4.3/class/";
+    const refs = Object.fromEntries(VOCABULARY.joint_type.terms.map((t) => [t.term_id, t.external_refs]));
+    expect(refs).toEqual({
+      bonded: [`${base}IfcFastenerGLUE`],
+      screwed: [`${base}IfcMechanicalFastenerSCREW`],
+      bolted: [`${base}IfcMechanicalFastenerBOLT`],
+      welded: [`${base}IfcFastenerWELD`],
+      clipped: ["none"],
+      snap_fit: ["none"],
+    });
   });
 
   it("REQ-VOC-003 tags every cause code with a boolean design_addressable", () => {

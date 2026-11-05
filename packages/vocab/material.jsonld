@@ -7,7 +7,7 @@
   },
   "@id": "https://loopledger.org/vocab/material/v0.1",
   "@type": "skos:ConceptScheme",
-  "$comment": "Community Specification License 1.0 (LL-002). Changed only through the RFC process (GOVERNANCE.md); a change is a new version. Every term is a draft and external_refs is empty: a bSDD class is added only once verified (#33).",
+  "$comment": "Community Specification License 1.0 (LL-002). Changed only through the RFC process (GOVERNANCE.md); a change is a new version. Every term is a draft and external_refs is empty: a bSDD class is added only once verified (#56).",
   "scheme": "material",
   "version": "0.1",
   "terms": [
