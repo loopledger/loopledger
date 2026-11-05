@@ -39,7 +39,7 @@
     { "method": "intact", "cluster": "dining-room-north", "sequence": ["j-1", "j-2", "j-3", "j-4"], "tools": ["10 mm socket", "heat gun"], "crew_size": 3, "declared_labor_min": 70 },
     { "method": "destructive", "cluster": "dining-room-north", "crew_size": 2, "declared_labor_min": 30 }
   ],
-  "design_ref": [{ "scheme": "part_number", "value": "BTH-2S-G4" }],
+  "design_ref": [{ "scheme": "part_number", "value": "BTH-2S-G4" }, { "scheme": "ifc_type_guid", "value": "3k9Xq1Lw5DsA0bYc7EfG2h" }],
   "controlled": { "value": false },
   "origin": { "site_id": "SITE1", "installed_on": "2019-03-14", "source_event": "evt_01JC8K2M4N6P8R0T2V4X6Z8B01" },
   "carrier": {
