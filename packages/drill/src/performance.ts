@@ -129,7 +129,7 @@ const bandOf = (life: number, width: number): { from: number; label: string } =>
 const foldAssets = (events: readonly EventRow[], pending: readonly EventRow[] = []): Asset[] => {
   const assets = new Map<string, Asset>();
   for (const e of events) {
-    if (e.type !== "asset_born") continue;
+    if (e.event_type !== "asset_born") continue;
     const ref = e.payload.catalog_ref as { catalog_id: string } | undefined;
     const revision = e.payload.revision as { label?: string } | undefined;
     for (const id of e.asset_ids) {
@@ -141,12 +141,12 @@ const foldAssets = (events: readonly EventRow[], pending: readonly EventRow[] = 
     for (const id of e.asset_ids) {
       const a = assets.get(id);
       if (!a) continue;
-      if (e.type === "removed") a.removed = e;
-      else if (e.type === "processed") a.processed.push(e);
-      else if (e.type === "weighed") a.weighed = e;
-      else if (e.type === "disposition_final") a.final = e;
-      else if (e.type === "observed") a.observed = true;
-      else if (e.type === "telemetry" && e.payload.metric === "life_used_pct" && e.occurred_at >= (lifeAt.get(id) ?? "")) {
+      if (e.event_type === "removed") a.removed = e;
+      else if (e.event_type === "processed") a.processed.push(e);
+      else if (e.event_type === "weighed") a.weighed = e;
+      else if (e.event_type === "disposition_final") a.final = e;
+      else if (e.event_type === "observed") a.observed = true;
+      else if (e.event_type === "telemetry" && e.payload.metric === "life_used_pct" && e.occurred_at >= (lifeAt.get(id) ?? "")) {
         a.life = Number(e.payload.value);
         lifeAt.set(id, e.occurred_at);
       }
@@ -154,7 +154,7 @@ const foldAssets = (events: readonly EventRow[], pending: readonly EventRow[] = 
   }
   // A held event feeds no figure: it only marks that a born asset has a removal waiting for its countersignature.
   for (const e of pending) {
-    if (e.type !== "removed") continue;
+    if (e.event_type !== "removed") continue;
     for (const id of e.asset_ids) {
       const a = assets.get(id);
       if (a) a.held_removal = true;

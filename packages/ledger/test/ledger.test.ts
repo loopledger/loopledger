@@ -35,7 +35,7 @@ const setup = () => {
 const base = (n: number, type: string, extra: Partial<EventRow> = {}): EventRow => ({
   event_id: evt(n),
   tenant_id: TENANT,
-  type,
+  event_type: type,
   asset_ids: [ASSET],
   occurred_at: "2026-02-02T08:00:00Z",
   recorded_at: "2026-02-02T08:00:05Z",
@@ -110,7 +110,7 @@ describe("REQ-LEDGER-001 events append and are never updated", () => {
     const bad: EventInput[] = [
       { ...weighed(), event_id: "evt_nope" },
       { ...weighed(), tenant_id: "" },
-      { ...weighed(), type: "made_up" },
+      { ...weighed(), event_type: "made_up" },
       { ...weighed(), asset_ids: [] },
       { ...weighed(), occurred_at: "yesterday" },
       { ...weighed(), payload: [] as never },

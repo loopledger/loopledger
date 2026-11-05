@@ -122,7 +122,7 @@ export class Ledger {
   private envelope(event: EventRow): void {
     if (typeof event.event_id !== "string" || !EVENT_ID.test(event.event_id)) refuse("event_id is not an evt_ ULID");
     if (typeof event.tenant_id !== "string" || event.tenant_id === "") refuse("tenant_id is required");
-    if (!(EVENT_TYPES as readonly string[]).includes(event.type)) refuse(`unknown event type ${String(event.type)}`);
+    if (!(EVENT_TYPES as readonly string[]).includes(event.event_type)) refuse(`unknown event type ${String(event.event_type)}`);
     if (!Array.isArray(event.asset_ids) || event.asset_ids.length === 0 || !event.asset_ids.every((a) => typeof a === "string" && ASSET_ID.test(a))) {
       refuse("asset_ids needs at least one ast_ ULID");
     }
@@ -160,7 +160,7 @@ export class Ledger {
 
   /** Whether the signatures meet the event type's rule in `packages/spec`. Conditional signers are not enforced (REQ-EVENT-002). */
   private complete(event: EventRow, signatures: readonly SignatureRow[]): boolean {
-    const rule = requiredSigners(event.type as EventType);
+    const rule = requiredSigners(event.event_type as EventType);
     const roles = new Set(signatures.map((s) => s.role_at_signing));
     if (signatures.length < rule.min) return false;
     if (rule.mode === "all") return rule.roles.every((r) => roles.has(r));

@@ -29,7 +29,7 @@ export interface EvidenceRef {
 export interface EventRow {
   event_id: string;
   tenant_id: string;
-  type: string;
+  event_type: string;
   asset_ids: string[];
   occurred_at: string;
   recorded_at: string;

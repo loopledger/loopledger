@@ -59,9 +59,9 @@
       "additionalProperties": false,
       "properties": { "value": { "type": "number", "exclusiveMinimum": 0 }, "uom": { "type": "string", "minLength": 1 } }
     },
-    "joint_type_term": { "type": "string", "pattern": "^https://loopledger\\.org/vocab/joint_type/(v[0-9]+(\\.[0-9]+)*/)?[a-z][a-z0-9_]*$" },
-    "material_term": { "type": "string", "pattern": "^https://loopledger\\.org/vocab/material/(v[0-9]+(\\.[0-9]+)*/)?[a-z][a-z0-9_]*$" },
-    "cause_term": { "type": "string", "pattern": "^https://loopledger\\.org/vocab/cause/(v[0-9]+(\\.[0-9]+)*/)?[a-z][a-z0-9_]*$" },
+    "joint_type_term": { "type": "string", "pattern": "^https://loopledger\\.org/vocab/joint_type/[a-z][a-z0-9_]*$" },
+    "material_term": { "type": "string", "pattern": "^https://loopledger\\.org/vocab/material/[a-z][a-z0-9_]*$" },
+    "cause_term": { "type": "string", "pattern": "^https://loopledger\\.org/vocab/cause/[a-z][a-z0-9_]*$" },
     "cause": {
       "$comment": "design_addressable is copied from the cause scheme at the time of the event; an event carrying true needs photo evidence (event.schema.json).",
       "type": "object",

@@ -36,7 +36,7 @@ describe("REQ-DRILL-001 G5 beats G4 within a life band and the pooled comparison
     const life = (rev: string) => fixture.assets.filter((a) => a.revision === rev && a.kind === "recovered").map((a) => a.life_used_pct!);
     const mean = (xs: number[]) => xs.reduce((s, x) => s + x, 0) / xs.length;
     expect(mean(life("G4"))).toBeGreaterThan(mean(life("G5")) + 30);
-    expect(fixture.events.filter((e) => e.type === "removed" && e.asset_ids[0] !== undefined).length).toBeGreaterThanOrEqual(26);
+    expect(fixture.events.filter((e) => e.event_type === "removed" && e.asset_ids[0] !== undefined).length).toBeGreaterThanOrEqual(26);
   });
 
   it("is faster and diverts more in the shared 50-75 band, G4 against its successor G5", () => {
@@ -177,7 +177,7 @@ describe("REQ-DRILL-006 an asset whose only removal is held counts as pending, n
   });
 
   it("counts an asset with a held removal and an observed event as in service, not pending", async () => {
-    const observed = events.find((e) => e.type === "observed" && e.asset_ids[0] !== undefined)!;
+    const observed = events.find((e) => e.event_type === "observed" && e.asset_ids[0] !== undefined)!;
     const heldAsset = held[0]!.asset_ids[0]!;
     const g5 = revisionPerformance([...events, { ...observed, event_id: "evt_extra", asset_ids: [heldAsset] }], fixture.catalog, { pending: held }).find((r) => r.revision === "G5" && r.band === "pooled")!;
     expect(g5.leakage).toMatchObject({ in_service: 3, pending: 0, leaked: 1 });
@@ -195,7 +195,7 @@ describe("REQ-DRILL-005 every figure traces to signed events and carries its bas
       expect(final.has(id)).toBe(true);
       const read = await ledger.read(fixture.tenant, id);
       expect(read.held).toBe(false);
-      expect(read.signatures.length).toBeGreaterThanOrEqual(requiredSigners(read.type as EventType).min);
+      expect(read.signatures.length).toBeGreaterThanOrEqual(requiredSigners(read.event_type as EventType).min);
     }
   });
 

@@ -31,13 +31,11 @@ export const VOCABULARY: Record<Scheme, SchemeFile> = Object.fromEntries(
 export const isTermInScheme = (scheme: string, termId: string): boolean =>
   (SCHEMES as readonly string[]).includes(scheme) && VOCABULARY[scheme as Scheme].terms.some((t) => t.term_id === termId);
 
-// A term IRI is `https://loopledger.org/vocab/<scheme>/[v<version>/]<term_id>`; a version, when given, must be the published one.
+// A term IRI is `https://loopledger.org/vocab/<scheme>/<term_id>`, the one canonical form; any versioned form does not resolve.
 export const termForIri = (iri: string): Term | undefined => {
-  const m = /^https:\/\/loopledger\.org\/vocab\/([a-z_]+)\/(?:v([0-9]+(?:\.[0-9]+)*)\/)?([a-z][a-z0-9_]*)$/.exec(iri);
+  const m = /^https:\/\/loopledger\.org\/vocab\/([a-z_]+)\/([a-z][a-z0-9_]*)$/.exec(iri);
   if (!m) return undefined;
-  const [, scheme, version, termId] = m;
+  const [, scheme, termId] = m;
   if (!(SCHEMES as readonly string[]).includes(scheme!)) return undefined;
-  const file = VOCABULARY[scheme as Scheme];
-  if (version !== undefined && version !== file.version) return undefined;
-  return file.terms.find((t) => t.term_id === termId);
+  return VOCABULARY[scheme as Scheme].terms.find((t) => t.term_id === termId);
 };

@@ -3,6 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import Ajv2020 from "ajv/dist/2020.js";
 import addFormats from "ajv-formats";
+import jsonld from "jsonld";
 import { describe, expect, it } from "vitest";
 import { EVENT_TYPES, REQUIRED_SIGNERS, requiredSigners } from "../src/index";
 import type { EventType } from "../src/index";
@@ -28,7 +29,7 @@ const grantCheck = ajv.compile({ $ref: `${passportSchema.$id}#/$defs/data_grant`
 const booth = read("examples/booth-2s-g4.passport.json");
 const seat = read("examples/booth-2s-g4-seat.passport.json");
 const events: Json[] = read("examples/booth-2s-g4.events.json");
-const event = (type: string, nth = 0): Json => structuredClone(events.filter((e) => e.type === type)[nth]);
+const event = (type: string, nth = 0): Json => structuredClone(events.filter((e) => e.event_type === type)[nth]);
 const copy = (doc: Json): Json => structuredClone(doc);
 
 const signatureErrors = (doc: Json): boolean => {
@@ -49,7 +50,7 @@ const schemaSigners = (): Map<string, { min: number; roles: string[] }> => {
   for (const entry of eventSchema.allOf) {
     const signatures = entry.then?.properties?.signatures;
     if (!signatures) continue;
-    const type = entry.if.properties.type;
+    const type = entry.if.properties.event_type;
     for (const t of type.enum ?? [type.const]) found.set(t, { min: signatures.minItems, roles: roles(signatures).sort() });
   }
   return found;
@@ -90,8 +91,8 @@ describe("REQ-SPEC-002 example passports cover an assembly, a carrier and a reco
     expect(booth.components.length).toBeGreaterThan(1);
     expect(booth.joints.length).toBeGreaterThan(1);
     expect(booth.carrier.digital_link).toMatch(/\/01\/\d{14}\/21\//);
-    expect(events.map((e) => e.type)).toContain("record_transferred");
-    expect(events.map((e) => e.type)).toContain("carrier_attached");
+    expect(events.map((e) => e.event_type)).toContain("record_transferred");
+    expect(events.map((e) => e.event_type)).toContain("carrier_attached");
   });
 
   it("keeps joints between components the assembly lists, and a separated component's lineage pointing at its parent", () => {
@@ -311,14 +312,86 @@ describe("REQ-PASSPORT-007 vocabulary fields are scheme-qualified IRIs, checked 
 
   it("does not check membership: any well-formed term in the right scheme passes (#18 adds that)", () => {
     const doc = copy(booth);
-    doc.joints[0].type = "https://loopledger.org/vocab/joint_type/v0.1/not_yet_published";
+    doc.joints[0].type = "https://loopledger.org/vocab/joint_type/not_yet_published";
     expect(passportOk(doc)).toBe(true);
+  });
+});
+
+const CONTEXT_URLS = {
+  epcis: "https://ref.gs1.org/standards/epcis/epcis-context.jsonld",
+  vc: "https://www.w3.org/ns/credentials/v2",
+  ll: "https://loopledger.org/schema/v0.1/context.jsonld",
+};
+const CONTEXT_FILES: Record<string, string> = {
+  [CONTEXT_URLS.epcis]: "test/fixtures/contexts/epcis-context.jsonld",
+  [CONTEXT_URLS.vc]: "test/fixtures/contexts/credentials-v2.jsonld",
+  [CONTEXT_URLS.ll]: "schema/context.jsonld",
+};
+/** Serves the vendored contexts and the local one; any other URL fails, so nothing reaches the network. */
+const documentLoader = async (url: string) => {
+  const file = CONTEXT_FILES[url];
+  if (file === undefined) throw new Error(`context ${url} is not vendored`);
+  return { contextUrl: undefined, documentUrl: url, document: read(file) };
+};
+const expand = (doc: Json, contexts: string[]): Promise<Json[]> =>
+  jsonld.expand({ ...doc, "@context": contexts }, { documentLoader }) as Promise<Json[]>;
+const ALONGSIDE = [CONTEXT_URLS.epcis, CONTEXT_URLS.vc, CONTEXT_URLS.ll];
+const LL = "https://loopledger.org/ns/v0.1#";
+const ids = (nodes: Json[] | undefined): string[] => (nodes ?? []).map((n) => n["@id"]);
+
+describe("REQ-SPEC-004 the context expands alongside the EPCIS 2.0 and VC v2 contexts", () => {
+  it("expands a passport after both contexts without a protected-term error, and joint type, material and external refs are IRIs", async () => {
+    const doc = copy(booth);
+    doc.components[0].external_refs = ["https://identifier.buildingsmart.org/uri/buildingsmart/ifc/4.3/class/IfcBeam"];
+    const [node] = await expand(doc, ALONGSIDE);
+    const joints: Json[] = node[`${LL}joints`];
+    expect(joints.map((j) => ids(j[`${LL}joint_type`])[0])).toEqual(booth.joints.map((j: Json) => j.type));
+    expect(joints.every((j) => j["@type"] === undefined && j[`${LL}event_type`] === undefined)).toBe(true);
+    const components: Json[] = node[`${LL}components`];
+    expect(components.map((c) => ids(c[`${LL}material`])[0])).toEqual(booth.components.map((c: Json) => c.material));
+    expect(ids(components[0][`${LL}external_refs`])).toEqual(doc.components[0].external_refs);
+    expect(ids(node[`${LL}carrier`]?.[0]?.[`${LL}digital_link`])).toEqual([booth.carrier.digital_link]);
+  });
+
+  it("expands an event after both contexts, with the event type as plain text under event_type", async () => {
+    const [node] = await expand(event("removed"), ALONGSIDE);
+    expect(node["@type"]).toEqual([`${LL}Event`]);
+    expect(node[`${LL}event_type`]).toEqual([{ "@value": "removed" }]);
+  });
+
+  it("expands the same way with the context alone", async () => {
+    const [node] = await expand(copy(booth), [CONTEXT_URLS.ll]);
+    expect(ids(node[`${LL}joints`][0][`${LL}joint_type`])).toEqual([booth.joints[0].type]);
+  });
+
+  it("loads the local context from a loader that refuses every URL it does not vendor", async () => {
+    await expect(documentLoader("https://example.com/other.jsonld")).rejects.toThrow("not vendored");
+  });
+});
+
+describe("REQ-SPEC-005 one IRI form per vocabulary term, the unversioned term IRI", () => {
+  it("rejects the versioned form in joint type, material and cause", () => {
+    const joint = copy(booth);
+    joint.joints[0].type = "https://loopledger.org/vocab/joint_type/v0.1/bolted";
+    expect(passportOk(joint)).toBe(false);
+    const material = copy(booth);
+    material.components[0].material = "https://loopledger.org/vocab/material/v0.1/foam";
+    expect(passportOk(material)).toBe(false);
+    const cause = event("removed");
+    cause.payload.cause.term = "https://loopledger.org/vocab/cause/v0.1/bonded_joint";
+    expect(eventOk(cause)).toBe(false);
+  });
+
+  it("accepts the unversioned form", () => {
+    const material = copy(booth);
+    material.components[0].material = "https://loopledger.org/vocab/material/foam";
+    expect(passportOk(material)).toBe(true);
   });
 });
 
 describe("REQ-EVENT-001 envelope and a typed payload for every event type", () => {
   it("lists every taxonomy event type in the envelope enum", () => {
-    expect([...eventSchema.properties.type.enum].sort()).toEqual([...EVENT_TYPES].sort());
+    expect([...eventSchema.properties.event_type.enum].sort()).toEqual([...EVENT_TYPES].sort());
   });
 
   it("has a payload definition for each type and rejects a payload of the wrong shape", () => {
@@ -332,13 +405,13 @@ describe("REQ-EVENT-001 envelope and a typed payload for every event type", () =
   });
 
   it("rejects an envelope missing a required field, with an unknown type, or with a naive timestamp", () => {
-    for (const field of ["event_id", "tenant_id", "type", "occurred_at", "recorded_at", "asset_ids", "payload", "signatures", "held"]) {
+    for (const field of ["event_id", "tenant_id", "event_type", "occurred_at", "recorded_at", "asset_ids", "payload", "signatures", "held"]) {
       const doc = event("weighed");
       delete doc[field];
       expect(eventOk(doc), field).toBe(false);
     }
     const unknown = event("weighed");
-    unknown.type = "teleported";
+    unknown.event_type = "teleported";
     expect(eventOk(unknown)).toBe(false);
     const naive = event("weighed");
     naive.occurred_at = "yesterday";
@@ -383,7 +456,7 @@ const bare = (type: EventType, signatures: Json[], held = false): Json => ({
   event_id: "evt_01JC8K2M4N6P8R0T2V4X6Z8B90",
   tenant_id: "acme-hospitality",
   asset_ids: ["ast_01JC8K2M4N6P8R0T2V4X6Z8A01"],
-  type,
+  event_type: type,
   occurred_at: "2026-09-20T15:00:00Z",
   recorded_at: "2026-09-20T15:00:01Z",
   payload: {},

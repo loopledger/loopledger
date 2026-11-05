@@ -67,7 +67,7 @@ export const buildFixture = (): Fixture => {
   const events: EventInput[] = [];
   const at = (iso: string, plusMin = 0): string => new Date(Date.parse(iso) + plusMin * 60000).toISOString().replace(".000Z", "Z");
   const emit = (type: string, asset: string, occurred: string, payload: Record<string, unknown>, signers: Role[]): string => {
-    const event = { event_id: id("evt", ++seq), tenant_id: TENANT, type, asset_ids: [asset], occurred_at: occurred, recorded_at: at(occurred, 5), payload };
+    const event = { event_id: id("evt", ++seq), tenant_id: TENANT, event_type: type, asset_ids: [asset], occurred_at: occurred, recorded_at: at(occurred, 5), payload };
     const signatures: SignatureRow[] = signers.map((role) => {
       const body = { signed_hash: eventHash(event), party_id: party(role), role_at_signing: role, signed_at: at(occurred, 6) };
       return { sig_id: `sig_${++sigs}`, key_id: `key-${role}`, alg: "Ed25519", ...body, signature: sign(null, signingInput(body), pairs.get(role)!.privateKey).toString("base64") };

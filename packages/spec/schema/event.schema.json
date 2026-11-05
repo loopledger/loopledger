@@ -4,7 +4,7 @@
   "title": "LoopLedger event envelope and typed payloads v0.1",
   "$comment": "Community Specification License 1.0 (LL-002). The signature counts in the signer allOf entries below repeat REQUIRED_SIGNERS in src/signers.ts; a test fails if they differ. An event stays held until its required signatures are complete, so the signer rules bind only when held is false. Labor fields measure the asset and its crew size, never a worker: payloads reject unknown keys, so no field can key labor to an individual.",
   "type": "object",
-  "required": ["@context", "@type", "event_id", "tenant_id", "type", "occurred_at", "recorded_at", "asset_ids", "payload", "signatures", "held"],
+  "required": ["@context", "@type", "event_id", "tenant_id", "event_type", "occurred_at", "recorded_at", "asset_ids", "payload", "signatures", "held"],
   "additionalProperties": false,
   "properties": {
     "@context": {
@@ -18,7 +18,7 @@
     "recovery_event_id": { "type": "string", "minLength": 1 },
     "site_id": { "type": "string", "minLength": 1 },
     "asset_ids": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "passport.schema.json#/$defs/asset_id" } },
-    "type": {
+    "event_type": {
       "enum": [
         "asset_born", "carrier_attached", "observed", "identity_resolved", "route_proposed", "route_confirmed", "route_fallback",
         "removed", "custody_transferred", "weighed", "processed", "maintained", "disposition_final", "record_transferred",
@@ -53,47 +53,47 @@
         "properties": { "evidence": { "contains": { "properties": { "kind": { "const": "photo" } }, "required": ["kind"] } } }
       }
     },
-    { "if": { "properties": { "type": { "const": "asset_born" } }, "required": ["type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_asset_born" } } } },
-    { "if": { "properties": { "type": { "const": "carrier_attached" } }, "required": ["type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_carrier_attached" } } } },
-    { "if": { "properties": { "type": { "const": "observed" } }, "required": ["type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_observed" } } } },
-    { "if": { "properties": { "type": { "const": "identity_resolved" } }, "required": ["type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_identity_resolved" } } } },
-    { "if": { "properties": { "type": { "const": "route_proposed" } }, "required": ["type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_route_proposed" } } } },
-    { "if": { "properties": { "type": { "const": "route_confirmed" } }, "required": ["type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_route_confirmed" } } } },
-    { "if": { "properties": { "type": { "const": "route_fallback" } }, "required": ["type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_route_fallback" } } } },
-    { "if": { "properties": { "type": { "const": "removed" } }, "required": ["type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_removed" } } } },
-    { "if": { "properties": { "type": { "const": "custody_transferred" } }, "required": ["type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_custody_transferred" } } } },
-    { "if": { "properties": { "type": { "const": "weighed" } }, "required": ["type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_weighed" } } } },
-    { "if": { "properties": { "type": { "const": "processed" } }, "required": ["type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_processed" } } } },
-    { "if": { "properties": { "type": { "const": "maintained" } }, "required": ["type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_maintained" } } } },
-    { "if": { "properties": { "type": { "const": "disposition_final" } }, "required": ["type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_disposition_final" } } } },
-    { "if": { "properties": { "type": { "const": "record_transferred" } }, "required": ["type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_record_transferred" } } } },
-    { "if": { "properties": { "type": { "enum": ["exception_opened", "exception_updated", "exception_closed"] } }, "required": ["type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_exception" } } } },
-    { "if": { "properties": { "type": { "const": "gate_passed" } }, "required": ["type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_gate_passed" } } } },
-    { "if": { "properties": { "type": { "const": "telemetry" } }, "required": ["type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_telemetry" } } } },
-    { "if": { "properties": { "type": { "const": "rule_version_applied" } }, "required": ["type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_rule_version_applied" } } } },
+    { "if": { "properties": { "event_type": { "const": "asset_born" } }, "required": ["event_type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_asset_born" } } } },
+    { "if": { "properties": { "event_type": { "const": "carrier_attached" } }, "required": ["event_type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_carrier_attached" } } } },
+    { "if": { "properties": { "event_type": { "const": "observed" } }, "required": ["event_type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_observed" } } } },
+    { "if": { "properties": { "event_type": { "const": "identity_resolved" } }, "required": ["event_type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_identity_resolved" } } } },
+    { "if": { "properties": { "event_type": { "const": "route_proposed" } }, "required": ["event_type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_route_proposed" } } } },
+    { "if": { "properties": { "event_type": { "const": "route_confirmed" } }, "required": ["event_type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_route_confirmed" } } } },
+    { "if": { "properties": { "event_type": { "const": "route_fallback" } }, "required": ["event_type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_route_fallback" } } } },
+    { "if": { "properties": { "event_type": { "const": "removed" } }, "required": ["event_type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_removed" } } } },
+    { "if": { "properties": { "event_type": { "const": "custody_transferred" } }, "required": ["event_type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_custody_transferred" } } } },
+    { "if": { "properties": { "event_type": { "const": "weighed" } }, "required": ["event_type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_weighed" } } } },
+    { "if": { "properties": { "event_type": { "const": "processed" } }, "required": ["event_type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_processed" } } } },
+    { "if": { "properties": { "event_type": { "const": "maintained" } }, "required": ["event_type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_maintained" } } } },
+    { "if": { "properties": { "event_type": { "const": "disposition_final" } }, "required": ["event_type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_disposition_final" } } } },
+    { "if": { "properties": { "event_type": { "const": "record_transferred" } }, "required": ["event_type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_record_transferred" } } } },
+    { "if": { "properties": { "event_type": { "enum": ["exception_opened", "exception_updated", "exception_closed"] } }, "required": ["event_type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_exception" } } } },
+    { "if": { "properties": { "event_type": { "const": "gate_passed" } }, "required": ["event_type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_gate_passed" } } } },
+    { "if": { "properties": { "event_type": { "const": "telemetry" } }, "required": ["event_type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_telemetry" } } } },
+    { "if": { "properties": { "event_type": { "const": "rule_version_applied" } }, "required": ["event_type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_rule_version_applied" } } } },
 
     {
-      "if": { "properties": { "type": { "const": "asset_born" }, "held": { "const": false } }, "required": ["type", "held"] },
+      "if": { "properties": { "event_type": { "const": "asset_born" }, "held": { "const": false } }, "required": ["event_type", "held"] },
       "then": { "properties": { "signatures": { "minItems": 1, "contains": { "properties": { "role_at_signing": { "enum": ["adapter", "operator"] } }, "required": ["role_at_signing"] } } } }
     },
     {
-      "if": { "properties": { "type": { "const": "carrier_attached" }, "held": { "const": false } }, "required": ["type", "held"] },
+      "if": { "properties": { "event_type": { "const": "carrier_attached" }, "held": { "const": false } }, "required": ["event_type", "held"] },
       "then": { "properties": { "signatures": { "minItems": 1, "contains": { "properties": { "role_at_signing": { "enum": ["operator", "manufacturer"] } }, "required": ["role_at_signing"] } } } }
     },
     {
-      "if": { "properties": { "type": { "const": "observed" }, "held": { "const": false } }, "required": ["type", "held"] },
+      "if": { "properties": { "event_type": { "const": "observed" }, "held": { "const": false } }, "required": ["event_type", "held"] },
       "then": { "properties": { "signatures": { "minItems": 1, "contains": { "properties": { "role_at_signing": { "enum": ["adapter"] } }, "required": ["role_at_signing"] } } } }
     },
     {
-      "if": { "properties": { "type": { "const": "identity_resolved" }, "held": { "const": false } }, "required": ["type", "held"] },
+      "if": { "properties": { "event_type": { "const": "identity_resolved" }, "held": { "const": false } }, "required": ["event_type", "held"] },
       "then": { "properties": { "signatures": { "minItems": 1, "contains": { "properties": { "role_at_signing": { "enum": ["system"] } }, "required": ["role_at_signing"] } } } }
     },
     {
-      "if": { "properties": { "type": { "const": "route_proposed" }, "held": { "const": false } }, "required": ["type", "held"] },
+      "if": { "properties": { "event_type": { "const": "route_proposed" }, "held": { "const": false } }, "required": ["event_type", "held"] },
       "then": { "properties": { "signatures": { "minItems": 1, "contains": { "properties": { "role_at_signing": { "enum": ["system"] } }, "required": ["role_at_signing"] } } } }
     },
     {
-      "if": { "properties": { "type": { "const": "route_confirmed" }, "held": { "const": false } }, "required": ["type", "held"] },
+      "if": { "properties": { "event_type": { "const": "route_confirmed" }, "held": { "const": false } }, "required": ["event_type", "held"] },
       "then": {
         "properties": {
           "signatures": {
@@ -107,11 +107,11 @@
       }
     },
     {
-      "if": { "properties": { "type": { "const": "route_fallback" }, "held": { "const": false } }, "required": ["type", "held"] },
+      "if": { "properties": { "event_type": { "const": "route_fallback" }, "held": { "const": false } }, "required": ["event_type", "held"] },
       "then": { "properties": { "signatures": { "minItems": 1, "contains": { "properties": { "role_at_signing": { "enum": ["system"] } }, "required": ["role_at_signing"] } } } }
     },
     {
-      "if": { "properties": { "type": { "const": "removed" }, "held": { "const": false } }, "required": ["type", "held"] },
+      "if": { "properties": { "event_type": { "const": "removed" }, "held": { "const": false } }, "required": ["event_type", "held"] },
       "then": {
         "properties": {
           "signatures": {
@@ -125,7 +125,7 @@
       }
     },
     {
-      "if": { "properties": { "type": { "const": "custody_transferred" }, "held": { "const": false } }, "required": ["type", "held"] },
+      "if": { "properties": { "event_type": { "const": "custody_transferred" }, "held": { "const": false } }, "required": ["event_type", "held"] },
       "then": {
         "properties": {
           "signatures": {
@@ -139,19 +139,19 @@
       }
     },
     {
-      "if": { "properties": { "type": { "const": "weighed" }, "held": { "const": false } }, "required": ["type", "held"] },
+      "if": { "properties": { "event_type": { "const": "weighed" }, "held": { "const": false } }, "required": ["event_type", "held"] },
       "then": { "properties": { "signatures": { "minItems": 1, "contains": { "properties": { "role_at_signing": { "enum": ["scale"] } }, "required": ["role_at_signing"] } } } }
     },
     {
-      "if": { "properties": { "type": { "const": "processed" }, "held": { "const": false } }, "required": ["type", "held"] },
+      "if": { "properties": { "event_type": { "const": "processed" }, "held": { "const": false } }, "required": ["event_type", "held"] },
       "then": { "properties": { "signatures": { "minItems": 1, "contains": { "properties": { "role_at_signing": { "enum": ["facility"] } }, "required": ["role_at_signing"] } } } }
     },
     {
-      "if": { "properties": { "type": { "const": "maintained" }, "held": { "const": false } }, "required": ["type", "held"] },
+      "if": { "properties": { "event_type": { "const": "maintained" }, "held": { "const": false } }, "required": ["event_type", "held"] },
       "then": { "properties": { "signatures": { "minItems": 1, "contains": { "properties": { "role_at_signing": { "enum": ["maintainer"] } }, "required": ["role_at_signing"] } } } }
     },
     {
-      "if": { "properties": { "type": { "const": "disposition_final" }, "held": { "const": false } }, "required": ["type", "held"] },
+      "if": { "properties": { "event_type": { "const": "disposition_final" }, "held": { "const": false } }, "required": ["event_type", "held"] },
       "then": {
         "properties": {
           "signatures": {
@@ -165,7 +165,7 @@
       }
     },
     {
-      "if": { "properties": { "type": { "const": "record_transferred" }, "held": { "const": false } }, "required": ["type", "held"] },
+      "if": { "properties": { "event_type": { "const": "record_transferred" }, "held": { "const": false } }, "required": ["event_type", "held"] },
       "then": {
         "properties": {
           "signatures": {
@@ -179,19 +179,19 @@
       }
     },
     {
-      "if": { "properties": { "type": { "enum": ["exception_opened", "exception_updated", "exception_closed"] }, "held": { "const": false } }, "required": ["type", "held"] },
+      "if": { "properties": { "event_type": { "enum": ["exception_opened", "exception_updated", "exception_closed"] }, "held": { "const": false } }, "required": ["event_type", "held"] },
       "then": { "properties": { "signatures": { "minItems": 1 } } }
     },
     {
-      "if": { "properties": { "type": { "const": "gate_passed" }, "held": { "const": false } }, "required": ["type", "held"] },
+      "if": { "properties": { "event_type": { "const": "gate_passed" }, "held": { "const": false } }, "required": ["event_type", "held"] },
       "then": { "properties": { "signatures": { "minItems": 1, "contains": { "properties": { "role_at_signing": { "enum": ["system", "inspector"] } }, "required": ["role_at_signing"] } } } }
     },
     {
-      "if": { "properties": { "type": { "const": "telemetry" }, "held": { "const": false } }, "required": ["type", "held"] },
+      "if": { "properties": { "event_type": { "const": "telemetry" }, "held": { "const": false } }, "required": ["event_type", "held"] },
       "then": { "properties": { "signatures": { "minItems": 1, "contains": { "properties": { "role_at_signing": { "enum": ["device"] } }, "required": ["role_at_signing"] } } } }
     },
     {
-      "if": { "properties": { "type": { "const": "rule_version_applied" }, "held": { "const": false } }, "required": ["type", "held"] },
+      "if": { "properties": { "event_type": { "const": "rule_version_applied" }, "held": { "const": false } }, "required": ["event_type", "held"] },
       "then": { "properties": { "signatures": { "minItems": 1, "contains": { "properties": { "role_at_signing": { "enum": ["system"] } }, "required": ["role_at_signing"] } } } }
     }
   ],

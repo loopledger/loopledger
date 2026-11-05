@@ -112,7 +112,7 @@ describe("vocab v0.1", () => {
     expect(isTermInScheme("cause", "made_up")).toBe(false);
     expect(isTermInScheme("colour", "steel")).toBe(false);
     expect(termForIri("https://loopledger.org/vocab/material/steel")?.term_id).toBe("steel");
-    expect(termForIri("https://loopledger.org/vocab/material/v0.1/steel")?.term_id).toBe("steel");
+    expect(termForIri("https://loopledger.org/vocab/material/v0.1/steel")).toBeUndefined();
     expect(termForIri("https://loopledger.org/vocab/material/v9.9/steel")).toBeUndefined();
     expect(termForIri("https://loopledger.org/vocab/material/unobtainium")).toBeUndefined();
     expect(termForIri("https://loopledger.org/vocab/joint_type/steel")).toBeUndefined();
