@@ -61,6 +61,39 @@ describe("vocab v0.1", () => {
     });
   });
 
+  it("REQ-VOC-007 lists the ISO 20887:2020 principles each joint type serves, as LoopLedger's judgment", () => {
+    const standard: Record<string, string> = {
+      "5.2.2": "Versatility",
+      "5.2.3": "Convertibility",
+      "5.2.4": "Expandability",
+      "5.3.2": "Ease of access to components and services",
+      "5.3.3": "Independence",
+      "5.3.4": "Avoidance of unnecessary treatments and finishes",
+      "5.3.5": "Supporting re-use (circular economy) business models",
+      "5.3.6": "Simplicity",
+      "5.3.7": "Standardization",
+      "5.3.8": "Safety of disassembly",
+    };
+    for (const t of VOCABULARY.joint_type.terms) {
+      expect(Array.isArray(t.iso_20887_principles)).toBe(true);
+      for (const p of t.iso_20887_principles!) expect(standard[p.clause]).toBe(p.name);
+    }
+    const clauses = Object.fromEntries(VOCABULARY.joint_type.terms.map((t) => [t.term_id, t.iso_20887_principles!.map((p) => p.clause)]));
+    expect(clauses).toEqual({
+      screwed: ["5.3.3", "5.3.6", "5.3.7"],
+      bolted: ["5.3.3", "5.3.6", "5.3.7", "5.2.3"],
+      clipped: ["5.3.3", "5.3.6"],
+      snap_fit: ["5.3.3", "5.3.6"],
+      bonded: [],
+      welded: [],
+    });
+    const comment = (VOCABULARY.joint_type as unknown as Record<string, string>)["$comment"]!;
+    expect(comment).toContain("LoopLedger's judgment");
+    for (const s of ["material", "cause"] as const) {
+      for (const t of VOCABULARY[s].terms) expect(t.iso_20887_principles).toBeUndefined();
+    }
+  });
+
   it("REQ-VOC-003 tags every cause code with a boolean design_addressable", () => {
     for (const t of VOCABULARY.cause.terms) expect(typeof t.design_addressable).toBe("boolean");
     const no = VOCABULARY.cause.terms.filter((t) => !t.design_addressable).map((t) => t.term_id);

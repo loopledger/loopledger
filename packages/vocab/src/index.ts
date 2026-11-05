@@ -10,6 +10,7 @@ export interface Term {
   scheme: Scheme;
   label: string;
   external_refs: string[];
+  iso_20887_principles?: { clause: string; name: string }[];
   design_addressable?: boolean;
   status: string;
 }
