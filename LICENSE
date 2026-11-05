@@ -1,10 +1,9 @@
 LoopLedger is licensed per path (decision LL-002). Copyright Lemur-Labs contributors.
 
-  packages/spec, packages/vocab   Community Specification License 1.0
-  packages/corpus/data            CDLA-Permissive-2.0
+  packages/spec, packages/vocab   Community Specification License 1.0, LICENSES/Community-Spec-1.0.txt
+  packages/corpus/data            CDLA-Permissive-2.0, LICENSES/CDLA-Permissive-2.0.txt
   everything else                 Apache-2.0, the text below
 
-The spec, vocabulary and corpus paths are filled in by #6, #18 and #8. CONTRIBUTING.md has the full table.
 The Apache-2.0 license does not grant rights to the "LoopLedger" name or marks.
 
 ------------------------------------------------------------------------------

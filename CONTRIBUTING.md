@@ -13,17 +13,17 @@ path it lands in.
 | `packages/corpus/data` (the jurisdiction corpus) | CDLA-Permissive-2.0 |
 | Everything else (the ledger, router, adapters, UI, resolver, tooling) | Apache-2.0, see [LICENSE](LICENSE) |
 
-Those packages don't exist yet: the passport schema (#6), the corpus (#8) and the vocabularies (#18) put their files
-under the paths above. Apache-2.0 doesn't license the "LoopLedger" name or marks.
+The license texts are in [LICENSE](LICENSE) and [LICENSES/](LICENSES). Apache-2.0 doesn't license the "LoopLedger"
+name or marks.
 
 ## Public paths
 
 Development is private. Each merge to `main` adds one commit to github.com/loopledger/loopledger with only these paths
 (the allowlist is `mirror.paths`; the mirror carries no private history):
 
-- `packages/spec`, `packages/vocab`, `packages/ports`, `packages/ledger`, `packages/corpus`, `packages/adapters/*`,
-  `packages/router` and `packages/ui`
-- `LICENSE`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `README.md`, `package.json`, `pnpm-lock.yaml`,
+- `packages/spec`, `packages/vocab`, `packages/ports`, `packages/ledger`, `packages/corpus`, `packages/drill`,
+  `packages/adapters/*`, `packages/router` and `packages/ui`
+- `LICENSE`, `LICENSES/`, `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `README.md`, `package.json`, `pnpm-lock.yaml`,
   `pnpm-workspace.yaml`, `tsconfig.json`, `vitest.config.ts`, `.nvmrc` and `.gitignore`
 
 Everything else stays private, including `scripts/` and `docs/requirements/`.
@@ -31,6 +31,20 @@ Everything else stays private, including `scripts/` and `docs/requirements/`.
 The published root `package.json` leaves out the private `@lemur-labs/kit` dependency and the scripts that run files
 under the private `scripts/`, and its `pnpm-lock.yaml` is regenerated to match, so `pnpm install` works in the public
 tree.
+
+## Contributing from outside
+
+The public repository is a one-way mirror. A pull request opened there can't be merged, and the next publish leaves it
+behind. So:
+
+- Open an [issue](https://github.com/loopledger/loopledger/issues) for a finding, a question or a proposed change. A
+  change to the spec or a vocabulary starts as an issue titled `RFC: <change>`.
+- If you have a patch, link the branch in your fork from the issue. A maintainer ports it and credits you with a
+  `Co-authored-by` trailer.
+- Sign off every commit (`git commit -s`). Your sign-off certifies the
+  [Developer Certificate of Origin](https://developercertificate.org/): that you may contribute the change under the
+  license of the path it lands in.
+- Report security issues privately, as [SECURITY.md](SECURITY.md) says, never in a public issue.
 
 ## What each kind of contribution needs
 
@@ -47,7 +61,7 @@ tree.
 - **Data grants.** Catalog and performance data are governed by data grants, not contributions: a manufacturer or
   financier sees a tenant's record only under a grant both sides signed.
 
-## How a change lands
+## How a change lands (maintainers)
 
 - Every change is a pull request, and the merger squash-merges it.
 - Commits use Conventional Commit subjects and end with a `Refs: Lemur-Labs/loopledger#N` (or `Closes`) trailer.

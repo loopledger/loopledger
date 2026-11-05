@@ -24,6 +24,7 @@ Phase 0, under review. The passport and event schemas (v0.1, JSON-LD) and the jo
 | [packages/ledger](packages/ledger) | Append-only ledger: two-party signature verification, evidence hashing |
 | [packages/ports](packages/ports) | Interfaces for the event, evidence and key stores the ledger runs on |
 | [packages/corpus](packages/corpus) | Jurisdiction rules corpus, seeded with Chicago |
+| [packages/drill](packages/drill) | Design-feedback drill: one item in two revisions (G4 bonded, G5 screwed) run through recovery on synthetic events |
 
 ## Standards
 
