@@ -85,8 +85,9 @@ export const buildFixture = (): Fixture => {
 
   const born = (item: CatalogRevision, installed: string, kind: AssetKind, life?: number): string => {
     const asset_id = id("ast", ++nextAsset);
-    assets.push({ asset_id, revision: item.revision as "G4" | "G5", kind, ...(life === undefined ? {} : { life_used_pct: life }) });
-    emit("asset_born", asset_id, `${installed}T08:00:00Z`, { source: "procurement", catalog_ref: { catalog_id: item.catalog_id, version: 1 }, revision: { basis: "declared", label: item.revision } }, ["operator"]);
+    assets.push({ asset_id, revision: item.label as "G4" | "G5", kind, ...(life === undefined ? {} : { life_used_pct: life }) });
+    const catalog_ref = { manufacturer: { party_id: item.manufacturer }, model_reference: item.model_reference, version: item.version };
+    emit("asset_born", asset_id, `${installed}T08:00:00Z`, { source: "procurement", catalog_ref, revision: { basis: "declared", label: item.label } }, ["operator"]);
     // An asset in service is one the record still sees: an adapter observed it after the recovery events.
     if (kind === "in_service") emit("observed", asset_id, "2026-11-01T10:00:00Z", { adapter_kind: "bms", location: "SITE1" }, ["adapter"]);
     return asset_id;
@@ -112,10 +113,10 @@ export const buildFixture = (): Fixture => {
       ...(upholsterySeparated ? [{ material: `${MATERIAL}vinyl`, kg: 38.8 }] : []),
     ].map((f) => ({ material: f.material, mass_kg: Math.round(f.kg * wear * 100) / 100, weighed_event: weighedId }));
     const children = [id("ast", 5000 + ++nextChild), id("ast", 5000 + ++nextChild)];
-    emit("processed", asset, at(done, 60), { operation: "separate", before_refs: [asset], after_refs: children, labor_min: item.revision === "G4" ? 35 : 14, crew_size: 2, fractions, child_asset_ids: children }, ["facility"]);
+    emit("processed", asset, at(done, 60), { operation: "separate", before_refs: [asset], after_refs: children, labor_min: item.label === "G4" ? 35 : 14, crew_size: 2, fractions, child_asset_ids: children }, ["facility"]);
     const w = emit("weighed", asset, at(done, 90), { mass_kg: MASS_KG, scale_id: "scale-1", certification_id: "cert-2026-01" }, ["scale"]);
     if (w !== weighedId) throw new Error("the weighed event id moved");
-    emit("disposition_final", asset, at(done, 120), { family: item.revision === "G4" ? "recycle" : "redeploy" }, ["receiver", "operator"]);
+    emit("disposition_final", asset, at(done, 120), { family: item.label === "G4" ? "recycle" : "redeploy" }, ["receiver", "operator"]);
   };
 
   // G4: 14 recovered assets, 12 intact and 2 destructive, installed in 2019 and 52 to 97.5 percent through their life.

@@ -69,14 +69,36 @@
       "additionalProperties": false,
       "properties": { "term": { "$ref": "#/$defs/cause_term" }, "design_addressable": { "type": "boolean" } }
     },
-    "catalog_ref": {
+    "catalog_revision_ref": {
+      "$comment": "A catalog revision is keyed by manufacturer party_id plus model_reference plus version; article_number and gtin describe it and are not part of the key. Property mapping to Pset_ManufacturerTypeInformation: manufacturer.party_id to Manufacturer, model_reference to ModelReference, article_number to ArticleNumber, gtin to GlobalTradeItemNumber (the GTIN). revision.label is display-only. The same manufacturer and model on a supersedes ref, and a version that only increases along it, are checked by catalogRefErrors in packages/spec: JSON Schema cannot compare two values.",
       "type": "object",
-      "required": ["catalog_id", "version"],
+      "required": ["manufacturer", "model_reference", "version"],
       "additionalProperties": false,
       "properties": {
-        "catalog_id": { "type": "string", "minLength": 1 },
-        "version": { "type": "integer", "minimum": 1 },
-        "supersedes": { "type": "string", "minLength": 1 }
+        "manufacturer": {
+          "type": "object",
+          "required": ["party_id"],
+          "additionalProperties": false,
+          "properties": { "party_id": { "$ref": "#/$defs/party_id" } }
+        },
+        "model_reference": { "type": "string", "minLength": 1 },
+        "article_number": { "type": "string", "minLength": 1 },
+        "gtin": { "type": "string", "pattern": "^([0-9]{8}|[0-9]{12,14})$" },
+        "version": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "catalog_ref": {
+      "$comment": "A catalog_revision_ref that names the revision it replaces in a typed supersedes ref (REQ-PASSPORT-009).",
+      "type": "object",
+      "required": ["manufacturer", "model_reference", "version"],
+      "additionalProperties": false,
+      "properties": {
+        "manufacturer": { "$ref": "#/$defs/catalog_revision_ref/properties/manufacturer" },
+        "model_reference": { "$ref": "#/$defs/catalog_revision_ref/properties/model_reference" },
+        "article_number": { "$ref": "#/$defs/catalog_revision_ref/properties/article_number" },
+        "gtin": { "$ref": "#/$defs/catalog_revision_ref/properties/gtin" },
+        "version": { "$ref": "#/$defs/catalog_revision_ref/properties/version" },
+        "supersedes": { "$ref": "#/$defs/catalog_revision_ref" }
       }
     },
     "recovery_method": {
@@ -104,7 +126,7 @@
       }
     },
     "revision": {
-      "$comment": "The physical design generation (G4, G5). basis says how we know; unknown carries no label and plans as the slowest known revision.",
+      "$comment": "The physical design generation (G4, G5). basis says how we know; unknown carries no label and plans as the slowest known revision. The label is display-only: the revision's identity is catalog_ref (REQ-PASSPORT-009).",
       "type": "object",
       "required": ["basis"],
       "additionalProperties": false,

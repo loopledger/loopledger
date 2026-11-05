@@ -3,8 +3,8 @@
 // `Ledger.pending(tenant)` is optional and only marks assets whose removal is held (REQ-DRILL-006).
 // Every figure carries its basis, the leakage of the revision it measures and the event_ids it was folded from.
 import type { EventRow } from "@loopledger/ports";
-import { successorOf } from "./catalog";
-import type { CatalogRevision, Method } from "./catalog";
+import { revisionId, successorOf } from "./catalog";
+import type { CatalogRevision, Method, RevisionKey } from "./catalog";
 
 /** Width of a `life_used_pct` band in points; a constant so a tenant can change it. */
 export const LIFE_BAND_WIDTH = 25;
@@ -40,7 +40,11 @@ export interface JointFigure {
 }
 
 export interface RevisionRow {
-  catalog_id: string;
+  manufacturer: string;
+  model_reference: string;
+  /** `null` for the assets whose revision is unknown. */
+  version: number | null;
+  /** The revision's display label; the identity is manufacturer, model reference and version. */
   revision: string;
   /** `pooled` for every recovered asset, else `from-to` in `life_used_pct` points. */
   band: string;
@@ -93,8 +97,12 @@ interface Joint {
 
 interface Asset {
   asset_id: string;
-  catalog_id: string;
-  revision: string;
+  manufacturer: string;
+  model_reference: string;
+  /** `null` when the revision is unknown. */
+  version: number | null;
+  /** Display only. */
+  label: string;
   born: string;
   observed: boolean;
   /** A `removed` event is held for want of a countersignature; read only by `leakageOf`. */
@@ -109,7 +117,9 @@ interface Asset {
 /** Two decimals; `+ 0` turns a rounded -0 into 0. */
 const round = (value: number): number => Math.round(value * 100) / 100 + 0;
 const minutes = (event: EventRow): number => (Date.parse(String(event.payload.ended_at)) - Date.parse(String(event.payload.started_at))) / 60000;
-const groupKey = (catalogId: string, revision: string): string => `${catalogId}\u0000${revision}`;
+const groupKey = (a: { manufacturer: string; model_reference: string; version: number | null }): string => revisionId(a);
+const sameModel = (a: { manufacturer: string; model_reference: string }, b: { manufacturer: string; model_reference: string }): boolean =>
+  a.manufacturer === b.manufacturer && a.model_reference === b.model_reference;
 
 const percentile = (values: readonly number[], p: number): number | null => {
   if (values.length === 0) return null;
@@ -130,10 +140,21 @@ const foldAssets = (events: readonly EventRow[], pending: readonly EventRow[] = 
   const assets = new Map<string, Asset>();
   for (const e of events) {
     if (e.event_type !== "asset_born") continue;
-    const ref = e.payload.catalog_ref as { catalog_id: string } | undefined;
-    const revision = e.payload.revision as { label?: string } | undefined;
+    const ref = e.payload.catalog_ref as { manufacturer?: { party_id: string }; model_reference?: string; version?: number } | undefined;
+    const revision = e.payload.revision as { basis?: string; label?: string } | undefined;
+    // An asset of unknown revision keeps its manufacturer and model but has no version to key on.
+    const version = revision?.basis === "unknown" ? null : (ref?.version ?? null);
     for (const id of e.asset_ids) {
-      assets.set(id, { asset_id: id, catalog_id: ref?.catalog_id ?? "", revision: revision?.label ?? UNKNOWN_REVISION, born: e.event_id, observed: false, processed: [] });
+      assets.set(id, {
+        asset_id: id,
+        manufacturer: ref?.manufacturer?.party_id ?? "",
+        model_reference: ref?.model_reference ?? "",
+        version,
+        label: revision?.label ?? UNKNOWN_REVISION,
+        born: e.event_id,
+        observed: false,
+        processed: [],
+      });
     }
   }
   const lifeAt = new Map<string, string>();
@@ -207,7 +228,9 @@ const jointFigures = (assets: readonly Asset[], leakage: Leakage): JointFigure[]
     });
 };
 
-const row = (item: CatalogRevision | undefined, catalogId: string, revision: string, band: string, assets: readonly Asset[], leakage: Leakage): RevisionRow => {
+type Identity = Pick<RevisionRow, "manufacturer" | "model_reference" | "version" | "revision">;
+
+const row = (item: CatalogRevision | undefined, identity: Identity, band: string, assets: readonly Asset[], leakage: Leakage): RevisionRow => {
   const removed = assets.filter((a) => a.removed);
   const methods = new Set<Method>([...removed.map((a) => a.removed!.payload.method as Method), ...(band === POOLED ? (item?.recovery_method ?? []).map((m) => m.method) : [])]);
   const removal: RevisionRow["removal"] = {};
@@ -225,8 +248,7 @@ const row = (item: CatalogRevision | undefined, catalogId: string, revision: str
   }
   const intact = removed.filter((a) => a.removed!.payload.method === "intact").length;
   return {
-    catalog_id: catalogId,
-    revision,
+    ...identity,
     band,
     assets_removed: removed.length,
     leakage,
@@ -238,26 +260,26 @@ const row = (item: CatalogRevision | undefined, catalogId: string, revision: str
 };
 
 /**
- * One pooled row and one row per `life_used_pct` band for every `(catalog_id, revision)` that has a born asset or a
+ * One pooled row and one row per `life_used_pct` band for every (manufacturer, model reference, version) that has a born asset or a
  * catalog item. Rows within a revision come pooled first, then by band.
  */
 export const revisionPerformance = (events: readonly EventRow[], catalog: readonly CatalogRevision[], options: Options = {}): RevisionRow[] => {
   const width = options.bandWidth ?? LIFE_BAND_WIDTH;
   const assets = foldAssets(events, options.pending);
-  const keys = new Map<string, { catalog_id: string; revision: string }>();
-  for (const c of catalog) keys.set(groupKey(c.catalog_id, c.revision), { catalog_id: c.catalog_id, revision: c.revision });
-  for (const a of assets) keys.set(groupKey(a.catalog_id, a.revision), { catalog_id: a.catalog_id, revision: a.revision });
+  const keys = new Map<string, Identity>();
+  for (const c of catalog) keys.set(groupKey(c), { manufacturer: c.manufacturer, model_reference: c.model_reference, version: c.version, revision: c.label });
+  for (const a of assets) if (!keys.has(groupKey(a))) keys.set(groupKey(a), { manufacturer: a.manufacturer, model_reference: a.model_reference, version: a.version, revision: a.label });
   const rows: RevisionRow[] = [];
-  for (const [key, { catalog_id, revision }] of [...keys.entries()].sort(([a], [b]) => a.localeCompare(b))) {
-    const group = assets.filter((a) => groupKey(a.catalog_id, a.revision) === key);
-    const item = catalog.find((c) => c.catalog_id === catalog_id && c.revision === revision);
+  for (const [key, identity] of [...keys.entries()].sort(([a], [b]) => a.localeCompare(b))) {
+    const group = assets.filter((a) => groupKey(a) === key);
+    const item = catalog.find((c) => groupKey(c) === key);
     const leakage = leakageOf(group);
-    rows.push(row(item, catalog_id, revision, POOLED, group, leakage));
+    rows.push(row(item, identity, POOLED, group, leakage));
     const bands = new Map<number, string>();
     for (const a of group) if (a.removed && a.life !== undefined) bands.set(bandOf(a.life, width).from, bandOf(a.life, width).label);
     for (const [, label] of [...bands.entries()].sort(([a], [b]) => a - b)) {
       const inBand = group.filter((a) => a.removed && a.life !== undefined && bandOf(a.life, width).label === label);
-      rows.push(row(item, catalog_id, revision, label, inBand, leakage));
+      rows.push(row(item, identity, label, inBand, leakage));
     }
   }
   return rows;
@@ -291,21 +313,22 @@ const gap = (band: string, from: RevisionRow, to: RevisionRow, method: Method): 
 };
 
 /**
- * The revision against its successor along `supersedes` lineage: band by band where both have recovered assets,
+ * The revision against its successor along the typed `supersedes` ref: band by band where both have recovered assets,
  * and pooled. The pooled gap mostly measures age when the successor's assets are younger.
  */
-export const compareWithSuccessor = (rows: readonly RevisionRow[], catalog: readonly CatalogRevision[], catalogId: string, revision: string, method: Method = "intact"): Comparison => {
-  const next = successorOf(catalog, catalogId, revision);
-  if (!next) throw new Error(`no revision of ${catalogId} supersedes ${revision}`);
-  const find = (rev: string, band: string) => rows.find((r) => r.catalog_id === catalogId && r.revision === rev && r.band === band);
+export const compareWithSuccessor = (rows: readonly RevisionRow[], catalog: readonly CatalogRevision[], revision: RevisionKey, method: Method = "intact"): Comparison => {
+  const next = successorOf(catalog, revision);
+  const name = (k: RevisionKey) => `${k.model_reference} version ${k.version}`;
+  if (!next) throw new Error(`no revision of ${revision.model_reference} supersedes version ${revision.version}`);
+  const find = (key: RevisionKey, band: string) => rows.find((r) => groupKey(r) === groupKey(key) && r.band === band);
   const pair = (band: string) => {
     const from = find(revision, band);
-    const to = find(next.revision, band);
+    const to = find(next, band);
     return from && to ? { from, to } : undefined;
   };
   const pooledPair = pair(POOLED);
-  if (!pooledPair) throw new Error(`${catalogId} has no pooled row for ${revision} and ${next.revision}`);
-  const bandNames = [...new Set(rows.filter((r) => r.catalog_id === catalogId && r.band !== POOLED).map((r) => r.band))].sort((a, b) => parseInt(a) - parseInt(b));
+  if (!pooledPair) throw new Error(`no pooled row for ${name(revision)} and ${name(next)}`);
+  const bandNames = [...new Set(rows.filter((r) => sameModel(r, revision) && r.band !== POOLED).map((r) => r.band))].sort((a, b) => parseInt(a) - parseInt(b));
   const shared = bandNames.flatMap((band) => {
     const p = pair(band);
     return p ? [{ band, ...p }] : [];
@@ -328,8 +351,8 @@ export const compareWithSuccessor = (rows: readonly RevisionRow[], catalog: read
   const within: BandGap = { band: "within", labor_gap_min: weighted((g) => g.labor_gap_min), diversion_gap_pct: weighted((g) => g.diversion_gap_pct) };
   const over = (a: number | null, b: number | null) => (a === null || b === null ? null : round(a - b));
   return {
-    predecessor: revision,
-    successor: next.revision,
+    predecessor: pooledPair.from.revision,
+    successor: next.label,
     method,
     bands,
     pooled,
@@ -355,7 +378,7 @@ const featureOf = (item: CatalogRevision, jointId: string): Feature | undefined 
 };
 
 const catalogOf = (catalog: readonly CatalogRevision[], asset: Asset): CatalogRevision | undefined =>
-  catalog.find((c) => c.catalog_id === asset.catalog_id && c.revision === asset.revision);
+  catalog.find((c) => groupKey(c) === groupKey(asset));
 
 /**
  * The same outcomes folded by joint type × material pair instead of revision, so evidence carries across revisions
@@ -363,13 +386,14 @@ const catalogOf = (catalog: readonly CatalogRevision[], asset: Asset): CatalogRe
  */
 export const featurePerformance = (events: readonly EventRow[], catalog: readonly CatalogRevision[], pending: readonly EventRow[] = []): FeatureRow[] => {
   const assets = foldAssets(events, pending);
-  const byFeature = new Map<string, { feature: Feature; joints: Joint[]; revisions: Set<string> }>();
+  // The revisions that carry a feature, by identity, with the label to show.
+  const byFeature = new Map<string, { feature: Feature; joints: Joint[]; revisions: Map<string, string> }>();
   for (const item of catalog) {
     for (const j of item.joints) {
       const feature = featureOf(item, j.joint_id);
       if (!feature) continue;
-      const entry = byFeature.get(featureKey(feature)) ?? { feature, joints: [], revisions: new Set<string>() };
-      entry.revisions.add(groupKey(item.catalog_id, item.revision));
+      const entry = byFeature.get(featureKey(feature)) ?? { feature, joints: [], revisions: new Map<string, string>() };
+      entry.revisions.set(groupKey(item), item.label);
       byFeature.set(featureKey(feature), entry);
     }
   }
@@ -384,8 +408,8 @@ export const featurePerformance = (events: readonly EventRow[], catalog: readonl
   return [...byFeature.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([, { feature, joints, revisions }]) => {
-      const group = assets.filter((a) => revisions.has(groupKey(a.catalog_id, a.revision)));
-      const parts = [...revisions].map((k) => leakageOf(group.filter((a) => groupKey(a.catalog_id, a.revision) === k)));
+      const group = assets.filter((a) => revisions.has(groupKey(a)));
+      const parts = [...revisions.keys()].map((k) => leakageOf(group.filter((a) => groupKey(a) === k)));
       const born = parts.reduce((s, l) => s + l.born, 0);
       const leaked = parts.reduce((s, l) => s + l.leaked, 0);
       const leakage: Leakage = {
@@ -401,7 +425,7 @@ export const featurePerformance = (events: readonly EventRow[], catalog: readonl
       const sources = joints.map((j) => j.event_id);
       return {
         ...feature,
-        revisions: [...revisions].map((k) => k.split("\u0000")[1]!).sort(),
+        revisions: [...revisions.values()].sort(),
         n: joints.length,
         outcomes: { clean: count("clean"), damaged: count("damaged"), destroyed: count("destroyed") },
         clean_rate: figure(joints.length === 0 ? null : round(count("clean") / joints.length), joints.length, leakage, sources),
@@ -416,10 +440,10 @@ export const featurePerformance = (events: readonly EventRow[], catalog: readonl
  * asset of each revision, feature by feature, largest difference first. A feature only one revision has counts as zero
  * for the other.
  */
-export const attributeDifference = (events: readonly EventRow[], catalog: readonly CatalogRevision[], catalogId: string, slower: string, faster: string): FeatureShare[] => {
-  const assets = foldAssets(events).filter((a) => a.catalog_id === catalogId && a.removed);
-  const perAsset = (revision: string): Map<string, { feature: Feature; minutes: number }> => {
-    const group = assets.filter((a) => a.revision === revision);
+export const attributeDifference = (events: readonly EventRow[], catalog: readonly CatalogRevision[], slower: RevisionKey, faster: RevisionKey): FeatureShare[] => {
+  const assets = foldAssets(events).filter((a) => sameModel(a, slower) && a.removed);
+  const perAsset = (revision: RevisionKey): Map<string, { feature: Feature; minutes: number }> => {
+    const group = assets.filter((a) => groupKey(a) === groupKey(revision));
     const totals = new Map<string, { feature: Feature; minutes: number }>();
     for (const a of group) {
       const item = catalogOf(catalog, a);

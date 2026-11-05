@@ -7,7 +7,14 @@
   "kind": "unit",
   "class_name": "Booth module, 2-seat",
   "sku": "BTH-2S",
-  "catalog_ref": { "catalog_id": "BTH-2S", "version": 3, "supersedes": "G3" },
+  "catalog_ref": {
+    "manufacturer": { "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P08" },
+    "model_reference": "BTH-2S",
+    "article_number": "BTH-2S-G4",
+    "gtin": "09506000134352",
+    "version": 2,
+    "supersedes": { "manufacturer": { "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P08" }, "model_reference": "BTH-2S", "version": 1 }
+  },
   "revision": { "basis": "declared", "label": "G4" },
   "components": [
     { "component_id": "frame", "material": "https://loopledger.org/vocab/material/steel", "mass_kg": 91.6, "qty": 1 },

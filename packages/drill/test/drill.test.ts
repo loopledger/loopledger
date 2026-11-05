@@ -22,6 +22,8 @@ beforeAll(async () => {
 });
 
 const row = (revision: string, band = "pooled") => rows.find((r) => r.revision === revision && r.band === band)!;
+/** The G4 and G5 catalog revisions, which are versions 2 and 3 of BTH-2S. */
+const rev = (label: string): CatalogRevision => fixture.catalog.find((c) => c.label === label)!;
 
 /** Every figure under a value: an object with a basis, a leakage and sources. */
 const figures = (value: unknown): Figure[] => {
@@ -45,7 +47,7 @@ describe("REQ-DRILL-001 G5 beats G4 within a life band and the pooled comparison
     expect(g5.removal.intact!.p50.value!).toBeLessThan(g4.removal.intact!.p50.value!);
     expect(g5.diversion_pct.value!).toBeGreaterThan(g4.diversion_pct.value!);
 
-    const cmp = compareWithSuccessor(rows, fixture.catalog, "BTH-2S", "G4");
+    const cmp = compareWithSuccessor(rows, fixture.catalog, rev("G4"));
     expect(cmp.successor).toBe("G5");
     expect(cmp.bands.map((b) => b.band)).toEqual(["50-75"]);
     expect(cmp.within_band.labor_gap_min!).toBeGreaterThan(0);
@@ -53,7 +55,7 @@ describe("REQ-DRILL-001 G5 beats G4 within a life band and the pooled comparison
   });
 
   it("shows the pooled gap larger than the within-band gap on both measures", () => {
-    const cmp = compareWithSuccessor(rows, fixture.catalog, "BTH-2S", "G4");
+    const cmp = compareWithSuccessor(rows, fixture.catalog, rev("G4"));
     expect(cmp.pooled.labor_gap_min!).toBeGreaterThan(cmp.within_band.labor_gap_min!);
     expect(cmp.pooled.diversion_gap_pct!).toBeGreaterThan(cmp.within_band.diversion_gap_pct!);
     expect(cmp.overstatement.labor_min!).toBeGreaterThan(5);
@@ -61,7 +63,7 @@ describe("REQ-DRILL-001 G5 beats G4 within a life band and the pooled comparison
   });
 
   it("refuses a comparison with no successor revision", () => {
-    expect(() => compareWithSuccessor(rows, fixture.catalog, "BTH-2S", "G5")).toThrow(/no revision/);
+    expect(() => compareWithSuccessor(rows, fixture.catalog, rev("G5"))).toThrow(/no revision/);
   });
 });
 
@@ -81,7 +83,7 @@ describe("REQ-DRILL-002 feature performance attributes the difference to the bon
   });
 
   it("puts the largest share of the labor difference on the bonded joint and none on the bolted ones", () => {
-    const shares = attributeDifference(events, fixture.catalog, "BTH-2S", "G4", "G5");
+    const shares = attributeDifference(events, fixture.catalog, rev("G4"), rev("G5"));
     expect(shares[0]!.joint_type).toBe("bonded");
     expect(shares[0]!.share).toBeGreaterThan(0.5);
     for (const s of shares.filter((x) => x.joint_type === "bolted")) expect(s.difference_min).toBe(0);
@@ -91,8 +93,9 @@ describe("REQ-DRILL-002 feature performance attributes the difference to the bon
 describe("REQ-DRILL-003 a mixed G4/G5 event plans each asset by its own revision", () => {
   const asset = (n: number, label?: string, method?: "intact" | "destructive"): PlanAsset => ({
     asset_id: `ast_${n}`,
-    catalog_id: "BTH-2S",
-    revision: label === undefined ? { basis: "unknown" } : { basis: "declared", label },
+    manufacturer: rev("G4").manufacturer,
+    model_reference: "BTH-2S",
+    ...(label === undefined ? {} : { version: rev(label).version }),
     ...(method === undefined ? {} : { method }),
   });
 
@@ -210,7 +213,7 @@ describe("REQ-DRILL-005 every figure traces to signed events and carries its bas
   });
 
   it("reports a revision with no recovered asset on the declared basis", () => {
-    const g6: CatalogRevision = { catalog_id: "BTH-2S", revision: "G6", supersedes: "G5", components: [], joints: [], recovery_method: [{ method: "intact", declared_labor_min: 25 }] };
+    const g6: CatalogRevision = { ...rev("G5"), version: 4, label: "G6", supersedes: rev("G5"), components: [], joints: [], recovery_method: [{ method: "intact", declared_labor_min: 25 }] };
     const next = revisionPerformance(events, [...fixture.catalog, g6]).find((r) => r.revision === "G6")!;
     expect(next.removal.intact!.p50).toMatchObject({ value: 25, basis: { kind: "declared" } });
   });
@@ -221,5 +224,32 @@ describe("REQ-DRILL-005 every figure traces to signed events and carries its bas
     const sources = new Set(all().flatMap((f) => f.sources));
     expect(sources.has(fixture.held_event_id)).toBe(false);
     expect(row("G5").removal.intact!.p50.basis).toEqual({ kind: "measured", n: 12 });
+  });
+});
+
+describe("REQ-PASSPORT-009 the drill keys a catalog revision by manufacturer, model reference and version", () => {
+  const OTHER = "pty_01JC8K2M4N6P8R0T2V4X6Z8P99";
+
+  it("keeps two manufacturers' BTH-2S revisions with the same label apart", () => {
+    const { supersedes: _, ...g4 } = rev("G4");
+    const rival: CatalogRevision = { ...g4, manufacturer: OTHER };
+    const both = revisionPerformance(events, [...fixture.catalog, rival]);
+    const same = both.filter((r) => r.revision === "G4" && r.band === "pooled");
+    expect(same.map((r) => r.manufacturer).sort()).toEqual([rev("G4").manufacturer, OTHER].sort());
+    expect(same.find((r) => r.manufacturer === OTHER)!.leakage.born).toBe(0);
+    expect(same.find((r) => r.manufacturer === rev("G4").manufacturer)!.leakage.born).toBe(18);
+  });
+
+  it("follows the typed supersedes ref and not the label: a relabelled successor is still found", () => {
+    const relabelled = fixture.catalog.map((c) => (c.version === 3 ? { ...c, label: "second generation" } : c));
+    expect(compareWithSuccessor(rows, relabelled, rev("G4")).successor).toBe("second generation");
+    const elsewhere = fixture.catalog.map((c) => (c.version === 3 ? { ...c, supersedes: { ...rev("G4"), manufacturer: OTHER } } : c));
+    expect(() => compareWithSuccessor(rows, elsewhere, rev("G4"))).toThrow(/no revision/);
+  });
+
+  it("plans by manufacturer, model reference and version", () => {
+    const [line] = plan([{ asset_id: "ast_1", manufacturer: rev("G5").manufacturer, model_reference: "BTH-2S", version: 3 }], fixture.catalog, rows);
+    expect(line).toMatchObject({ revision: "G5", est_labor_min: row("G5").removal.intact!.p50.value });
+    expect(() => plan([{ asset_id: "ast_1", manufacturer: OTHER, model_reference: "BTH-2S", version: 3 }], fixture.catalog, rows)).toThrow(/no intact estimate/);
   });
 });

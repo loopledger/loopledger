@@ -20,6 +20,7 @@ const entities = (text: string): Map<number, { name: string; args: string }> => 
   return map;
 };
 
+const IDENTITY = ["Manufacturer", "ModelReference", "ArticleNumber", "GlobalTradeItemNumber"];
 const refs = (args: string): number[] => [...args.matchAll(/#(\d+)/g)].map((m) => Number(m[1]));
 const guidOf = (item: CatalogRevision): string => item.design_ref!.find((d) => d.scheme === "ifc_type_guid")!.value;
 
@@ -70,9 +71,9 @@ describe("REQ-DRILL-007 the IFC writer attaches one property set to the type obj
   });
 
   it("matches only on ifc_type_guid: a revision without one is skipped and listed, and no GUID is invented", () => {
-    const bare = catalog.map((c) => (c.revision === "G5" ? { ...c, design_ref: c.design_ref!.filter((d) => d.scheme !== "ifc_type_guid") } : c));
+    const bare = catalog.map((c) => (c.label === "G5" ? { ...c, design_ref: c.design_ref!.filter((d) => d.scheme !== "ifc_type_guid") } : c));
     const result = writeIfc(rows, bare);
-    expect(result.skipped).toEqual([`${bare[1]!.catalog_id} G5`]);
+    expect(result.skipped).toEqual([`${bare[1]!.manufacturer} BTH-2S version 3`]);
     expect(result.step).not.toContain(guidOf(catalog[1]!));
     expect([...entities(result.step).values()].filter((e) => e.name === "IFCTYPEOBJECT")).toHaveLength(1);
     expect(skipped).toEqual([]);
@@ -86,7 +87,7 @@ describe("REQ-DRILL-007 the IFC writer attaches one property set to the type obj
 describe("REQ-DRILL-008 the property values carry their basis and leakage beside every rate", () => {
   const propsOf = (revision: string): Map<string, string> => {
     const map = entities(step);
-    const item = catalog.find((c) => c.revision === revision)!;
+    const item = catalog.find((c) => c.label === revision)!;
     const type = [...map.entries()].find(([, e]) => e.name === "IFCTYPEOBJECT" && e.args.startsWith(`'${guidOf(item)}'`))![0];
     const rel = [...map.values()].find((e) => e.name === "IFCRELDEFINESBYPROPERTIES" && e.args.includes(`(#${type}),`))!;
     const set = map.get(Number(/#(\d+)$/.exec(rel.args)![1]))!;
@@ -113,10 +114,24 @@ describe("REQ-DRILL-008 the property values carry their basis and leakage beside
     }
   });
 
+  it("REQ-PASSPORT-009 writes the revision's identity under the Pset_ManufacturerTypeInformation property names", () => {
+    const g4 = propsOf("G4");
+    const item = catalog.find((c) => c.label === "G4")!;
+    expect(g4.get("Manufacturer")).toBe(`IFCLABEL('${item.manufacturer}')`);
+    expect(g4.get("ModelReference")).toBe("IFCLABEL('BTH-2S')");
+    expect(g4.get("ArticleNumber")).toBe("IFCLABEL('BTH-2S-G4')");
+    expect(g4.get("GlobalTradeItemNumber")).toBe("IFCLABEL('09506000134352')");
+    const g5 = propsOf("G5");
+    expect(g5.get("ArticleNumber")).toBe("IFCLABEL('BTH-2S-G5')");
+    expect(g5.has("GlobalTradeItemNumber")).toBe(false);
+  });
+
   it("writes a basis, measured n or declared, beside every figure", () => {
     for (const revision of ["G4", "G5"]) {
       const props = propsOf(revision);
-      const figures = [...props.keys()].filter((k) => !k.endsWith("_basis") && !k.endsWith("_leakage_leaked") && !k.endsWith("_leakage_rate") && !k.startsWith("leakage_") && k !== "assets_removed");
+      const figures = [...props.keys()].filter(
+        (k) => !k.endsWith("_basis") && !k.endsWith("_leakage_leaked") && !k.endsWith("_leakage_rate") && !k.startsWith("leakage_") && k !== "assets_removed" && !IDENTITY.includes(k),
+      );
       expect(figures.length).toBeGreaterThanOrEqual(4);
       for (const name of figures) expect(props.get(`${name}_basis`), name).toMatch(/^IFCLABEL\('(measured n=\d+|declared)'\)$/);
     }

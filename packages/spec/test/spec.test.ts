@@ -5,7 +5,7 @@ import Ajv2020 from "ajv/dist/2020.js";
 import addFormats from "ajv-formats";
 import jsonld from "jsonld";
 import { describe, expect, it } from "vitest";
-import { EVENT_TYPES, REQUIRED_SIGNERS, requiredSigners } from "../src/index";
+import { EVENT_TYPES, REQUIRED_SIGNERS, catalogErrors, requiredSigners } from "../src/index";
 import type { EventType } from "../src/index";
 
 type Json = any;
@@ -167,7 +167,8 @@ describe("REQ-PASSPORT-008 catalog item recovery method and design reference", (
   it("validates the G4 and G5 examples, G5 superseding G4 with screwed upholstery joints", () => {
     expect(passportOk(booth)).toBe(true);
     expect(passportOk(g5)).toBe(true);
-    expect(g5.catalog_ref.supersedes).toBe(booth.revision.label);
+    const { supersedes, ...own } = booth.catalog_ref;
+    expect(g5.catalog_ref.supersedes).toEqual({ manufacturer: own.manufacturer, model_reference: own.model_reference, version: own.version });
     expect(g5.joints.filter((j: Json) => j.type.endsWith("/screwed"))).toHaveLength(2);
   });
 
@@ -187,6 +188,105 @@ describe("REQ-PASSPORT-008 catalog item recovery method and design reference", (
     const empty = copy(g5);
     empty.design_ref[0].value = "";
     expect(passportOk(empty)).toBe(false);
+  });
+});
+
+describe("REQ-PASSPORT-009 a catalog revision is keyed by manufacturer, model reference and version", () => {
+  const g5 = read("examples/booth-2s-g5.passport.json");
+  const born = (): Json => event("asset_born");
+  const ref = (doc: Json): Json => doc.catalog_ref;
+
+  it("validates the G3, G4 and G5 lineage as versions 1, 2 and 3 of one model reference, with no check errors", () => {
+    expect([ref(g5).supersedes.version, ref(booth).version, ref(g5).version]).toEqual([2, 2, 3]);
+    expect(ref(booth).supersedes.version).toBe(1);
+    expect(ref(booth).model_reference).toBe(ref(g5).model_reference);
+    expect(ref(booth).manufacturer.party_id).toBe(booth.manufacturer.party_id);
+    expect(catalogErrors(booth)).toEqual([]);
+    expect(catalogErrors(g5)).toEqual([]);
+    expect(catalogErrors(born())).toEqual([]);
+    expect(eventOk(born())).toBe(true);
+  });
+
+  it("requires a manufacturer party_id and a model_reference, and drops catalog_id", () => {
+    for (const field of ["manufacturer", "model_reference", "version"]) {
+      const doc = copy(booth);
+      delete doc.catalog_ref[field];
+      expect(passportOk(doc), field).toBe(false);
+      const e = born();
+      delete e.payload.catalog_ref[field];
+      expect(eventOk(e), field).toBe(false);
+    }
+    const doc = copy(booth);
+    doc.catalog_ref.catalog_id = "BTH-2S";
+    expect(passportOk(doc)).toBe(false);
+    const named = copy(booth);
+    named.catalog_ref.manufacturer = { party_id: "Booth Makers" };
+    expect(passportOk(named)).toBe(false);
+    const withName = copy(booth);
+    withName.catalog_ref.manufacturer.name = "Booth Makers Ltd.";
+    expect(passportOk(withName)).toBe(false);
+  });
+
+  it("takes article_number and gtin as optional, and rejects a malformed gtin or an empty article number", () => {
+    const bare = copy(g5);
+    delete bare.catalog_ref.article_number;
+    expect(passportOk(bare)).toBe(true);
+    for (const [field, value] of [["gtin", "BTH-2S"], ["gtin", "123"], ["article_number", ""], ["version", 0]] as const) {
+      const doc = copy(booth);
+      doc.catalog_ref[field] = value;
+      expect(passportOk(doc), `${field} ${value}`).toBe(false);
+    }
+  });
+
+  it("rejects a supersedes that is a label and not a typed ref", () => {
+    const doc = copy(g5);
+    doc.catalog_ref.supersedes = "G4";
+    expect(passportOk(doc)).toBe(false);
+    const half = copy(g5);
+    delete half.catalog_ref.supersedes.model_reference;
+    expect(passportOk(half)).toBe(false);
+  });
+
+  it("rejects a version that goes backwards or stands still along supersedes, in a passport and an event", () => {
+    for (const version of [3, 4]) {
+      const doc = copy(g5);
+      doc.catalog_ref.supersedes.version = version;
+      expect(catalogErrors(doc), String(version)).toEqual(["catalog_ref: supersedes must name a lower version"]);
+    }
+    const e = born();
+    e.payload.catalog_ref.supersedes = { ...e.payload.catalog_ref, version: 3 };
+    expect(catalogErrors(e)).toEqual(["payload.catalog_ref: supersedes must name a lower version"]);
+  });
+
+  it("rejects a supersedes of another manufacturer or another model reference, in a component too", () => {
+    const maker = copy(g5);
+    maker.catalog_ref.supersedes.manufacturer.party_id = "pty_01JC8K2M4N6P8R0T2V4X6Z8P99";
+    expect(passportOk(maker)).toBe(true);
+    expect(catalogErrors(maker)).toEqual(["catalog_ref: supersedes names another manufacturer"]);
+    const model = copy(g5);
+    model.catalog_ref.supersedes.model_reference = "BTH-3S";
+    expect(catalogErrors(model)).toEqual(["catalog_ref: supersedes names another model_reference"]);
+    const part = copy(g5);
+    part.components[0].catalog_ref = copy(g5.catalog_ref);
+    part.components[0].catalog_ref.supersedes.version = 3;
+    expect(passportOk(part)).toBe(true);
+    expect(catalogErrors(part)).toEqual(["components[0].catalog_ref: supersedes must name a lower version"]);
+  });
+
+  it("keeps two manufacturers' revisions with the same model reference and label distinct by their keys", () => {
+    const other = copy(booth);
+    other.catalog_ref.manufacturer.party_id = "pty_01JC8K2M4N6P8R0T2V4X6Z8P99";
+    other.catalog_ref.supersedes.manufacturer.party_id = "pty_01JC8K2M4N6P8R0T2V4X6Z8P99";
+    expect(passportOk(other)).toBe(true);
+    expect(catalogErrors(other)).toEqual([]);
+    expect(other.revision.label).toBe(booth.revision.label);
+    expect(other.catalog_ref.manufacturer).not.toEqual(booth.catalog_ref.manufacturer);
+  });
+
+  it("documents the Pset_ManufacturerTypeInformation mapping in the schema", () => {
+    const comment: string = passportSchema.$defs.catalog_revision_ref.$comment;
+    for (const name of ["Manufacturer", "ModelReference", "ArticleNumber", "GlobalTradeItemNumber"]) expect(comment).toContain(name);
+    expect(passportSchema.$defs.catalog_revision_ref.properties).not.toHaveProperty("catalog_id");
   });
 });
 

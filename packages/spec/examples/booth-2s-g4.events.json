@@ -11,7 +11,7 @@
     "recorded_at": "2026-02-02T08:00:00Z",
     "payload": {
       "source": "procurement",
-      "catalog_ref": { "catalog_id": "BTH-2S", "version": 3 },
+      "catalog_ref": { "manufacturer": { "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P08" }, "model_reference": "BTH-2S", "article_number": "BTH-2S-G4", "gtin": "09506000134352", "version": 2 },
       "revision": { "basis": "declared", "label": "G4" },
       "origin": { "site_id": "SITE1", "installed_on": "2019-03-14", "source_event": "evt_01JC8K2M4N6P8R0T2V4X6Z8B01" }
     },

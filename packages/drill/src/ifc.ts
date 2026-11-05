@@ -2,6 +2,7 @@
 // LoopLedger_RecoveryPerformance, per catalog revision, attached through IfcRelDefinesByProperties to the
 // IfcTypeObject whose GlobalId is the revision's `ifc_type_guid` design_ref. Hand-built text, no dependency.
 import { createHash } from "node:crypto";
+import { revisionId } from "./catalog";
 import type { CatalogRevision } from "./catalog";
 import { POOLED } from "./performance";
 import type { Basis, Figure, RevisionRow } from "./performance";
@@ -10,7 +11,7 @@ export const PROPERTY_SET = "LoopLedger_RecoveryPerformance";
 
 export interface IfcResult {
   step: string;
-  /** Revisions left out for want of an `ifc_type_guid` or of a pooled row: `catalog_id revision`. */
+  /** Revisions left out for want of an `ifc_type_guid` or of a pooled row: `manufacturer model_reference version n`. */
   skipped: string[];
 }
 
@@ -49,8 +50,13 @@ const guid = (seed: string): string => {
 const basisText = (basis: Basis): string => (basis.kind === "measured" ? `measured n=${basis.n}` : "declared");
 
 /** The properties of one revision row: each figure with its basis and the leakage of its revision beside it. */
-const properties = (row: RevisionRow): [string, Value][] => {
+const properties = (item: CatalogRevision, row: RevisionRow): [string, Value][] => {
   const out: [string, Value][] = [];
+  // The revision's identity under the Pset_ManufacturerTypeInformation property names (REQ-PASSPORT-009).
+  out.push(["Manufacturer", { kind: "label", value: item.manufacturer }]);
+  out.push(["ModelReference", { kind: "label", value: item.model_reference }]);
+  if (item.article_number !== undefined) out.push(["ArticleNumber", { kind: "label", value: item.article_number }]);
+  if (item.gtin !== undefined) out.push(["GlobalTradeItemNumber", { kind: "label", value: item.gtin }]);
   const figure = (name: string, f: Figure): void => {
     out.push([name, f.value === null ? null : { kind: "real", value: f.value }]);
     out.push([`${name}_basis`, { kind: "label", value: basisText(f.basis) }]);
@@ -94,14 +100,14 @@ export const writeIfc = (rows: readonly RevisionRow[], catalog: readonly Catalog
   const owner = add("IFCOWNERHISTORY(#3,#4,$,.NOCHANGE.,$,$,$,0)");
 
   for (const item of catalog) {
-    const label = `${item.catalog_id} ${item.revision}`;
+    const label = `${item.model_reference} ${item.label}`;
     const typeGuid = item.design_ref?.find((d) => d.scheme === "ifc_type_guid")?.value;
-    const row = rows.find((r) => r.catalog_id === item.catalog_id && r.revision === item.revision && r.band === POOLED);
+    const row = rows.find((r) => revisionId(r) === revisionId(item) && r.band === POOLED);
     if (typeGuid === undefined || !IFC_GUID.test(typeGuid) || row === undefined) {
-      skipped.push(label);
+      skipped.push(`${item.manufacturer} ${item.model_reference} version ${item.version}`);
       continue;
     }
-    const values = properties(row).map(([name, value]) => add(`IFCPROPERTYSINGLEVALUE(${str(name)},$,${nominal(value)},$)`));
+    const values = properties(item, row).map(([name, value]) => add(`IFCPROPERTYSINGLEVALUE(${str(name)},$,${nominal(value)},$)`));
     const set = add(`IFCPROPERTYSET('${guid(`pset:${typeGuid}`)}',#${owner},${str(PROPERTY_SET)},$,(${values.map((v) => `#${v}`).join(",")}))`);
     const type = add(`IFCTYPEOBJECT('${typeGuid}',#${owner},${str(label)},$,$,$)`);
     add(`IFCRELDEFINESBYPROPERTIES('${guid(`rel:${typeGuid}`)}',#${owner},$,$,(#${type}),#${set})`);
