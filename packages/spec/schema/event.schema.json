@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://loopledger.org/schema/v0.1/event.schema.json",
   "title": "LoopLedger event envelope and typed payloads v0.1",
-  "$comment": "Community Specification License 1.0 (LL-002). The signature counts in the signer allOf entries below repeat REQUIRED_SIGNERS in src/signers.ts; a test fails if they differ. An event stays held until its required signatures are complete, so the signer rules bind only when held is false. Labor fields measure the asset and its crew size, never a worker: payloads reject unknown keys, so no field can key labor to an individual.",
+  "$comment": "Community Specification License 1.0 (LL-002). The signature counts in the signer allOf entries below repeat REQUIRED_SIGNERS in src/signers.ts; a test fails if they differ. An event stays held until its required signatures are complete, so the signer rules bind only when held is false. Two-party events also bind each signer's party_id to the payload party and require distinct signer parties; JSON Schema cannot compare a signature to the payload, so signerBindingErrors in src/signers.ts checks it (REQ-EVENT-014, REQ-EVENT-015). Labor fields measure the asset and its crew size, never a worker: payloads reject unknown keys, so no field can key labor to an individual.",
   "type": "object",
   "required": ["@context", "@type", "event_id", "tenant_id", "event_type", "occurred_at", "recorded_at", "asset_ids", "payload", "signatures", "held"],
   "additionalProperties": false,

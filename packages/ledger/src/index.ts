@@ -1,6 +1,6 @@
 // The ledger: an append-only event log with two-party signatures and evidence stored by hash (issue #7).
 // Events are never updated. A countersignature is a new signature row, and `held` is derived from the rows.
-import { EVENT_TYPES, requiredSigners } from "@loopledger/spec";
+import { EVENT_TYPES, requiredSigners, signerBindingErrors } from "@loopledger/spec";
 import type { EventType } from "@loopledger/spec";
 import type { EventRow, EventStore, EvidenceStore, KeyResolver, SignatureRow } from "@loopledger/ports";
 import { VERIFIERS, detachedSignature, eventHash, eventRow, jwsSigningInput, sha256 } from "./crypto";
@@ -169,6 +169,7 @@ export class Ledger {
     const rule = requiredSigners(event.event_type as EventType);
     const roles = new Set(signatures.map((s) => s.role_at_signing));
     if (signatures.length < rule.min) return false;
+    if (signerBindingErrors(event.event_type as EventType, event.payload, signatures).length > 0) return false;
     if (rule.mode === "all") return rule.roles.every((r) => roles.has(r));
     return rule.roles.length === 0 || rule.roles.some((r) => roles.has(r));
   }

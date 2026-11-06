@@ -6,7 +6,7 @@ import Ajv2020 from "ajv/dist/2020.js";
 import addFormats from "ajv-formats";
 import jsonld from "jsonld";
 import { describe, expect, it } from "vitest";
-import { EVENT_TYPES, REQUIRED_SIGNERS, catalogErrors, requiredSigners } from "../src/index";
+import { EVENT_TYPES, REQUIRED_SIGNERS, catalogErrors, requiredSigners, signerBindingErrors } from "../src/index";
 import type { EventType } from "../src/index";
 
 type Json = any;
@@ -641,6 +641,69 @@ describe("REQ-EVENT-004 a one-sided custody claim is held", () => {
     const doc = event("custody_transferred");
     delete doc.held;
     expect(eventOk(doc)).toBe(false);
+  });
+});
+
+const PARTY_A = "pty_01JC8K2M4N6P8R0T2V4X6Z8P21";
+const PARTY_B = "pty_01JC8K2M4N6P8R0T2V4X6Z8P22";
+const asParty = (role: string, party: string, key = "did:key:z6MkTestKey"): Json => ({ ...sign(role, 0), party_id: party, key_id: key });
+const bindingErrors = (doc: Json): string[] => signerBindingErrors(doc.event_type, doc.payload, doc.signatures);
+
+describe("REQ-EVENT-014 signers are the payload parties", () => {
+  const payloads: Record<string, Json> = {
+    custody_transferred: { from_party_id: PARTY_A, to_party_id: PARTY_B },
+    record_transferred: { from_owner_party_id: PARTY_A, to_owner_party_id: PARTY_B },
+    route_confirmed: { receiver_party_id: PARTY_B },
+  };
+
+  it.each(Object.keys(payloads))("accepts %s signed by the payload parties", (type) => {
+    const doc = bare(type as EventType, []);
+    doc.payload = payloads[type];
+    const [first, second] = REQUIRED_SIGNERS[type as EventType].roles;
+    const parties: Record<string, string> = { sender: PARTY_A, transferring_owner: PARTY_A, receiver: PARTY_B, receiving_owner: PARTY_B, operator: PARTY_A };
+    doc.signatures = [asParty(first!, parties[first!]!), asParty(second!, parties[second!]!)];
+    expect(bindingErrors(doc)).toEqual([]);
+  });
+
+  it.each(Object.keys(payloads))("rejects %s when a bound role is signed by another party", (type) => {
+    const doc = bare(type as EventType, []);
+    doc.payload = payloads[type];
+    const [first, second] = REQUIRED_SIGNERS[type as EventType].roles;
+    doc.signatures = [asParty(first!, "pty_01JC8K2M4N6P8R0T2V4X6Z8P23"), asParty(second!, "pty_01JC8K2M4N6P8R0T2V4X6Z8P24")];
+    expect(bindingErrors(doc).length).toBeGreaterThan(0);
+  });
+
+  it("rejects a custody_transferred signed by the wrong sender when the receiver is right", () => {
+    const doc = bare("custody_transferred", [asParty("sender", PARTY_B), asParty("receiver", PARTY_B)]);
+    doc.payload = payloads.custody_transferred;
+    expect(bindingErrors(doc)).toContain("sender signer is not payload from_party_id");
+  });
+
+  it("holds the spec example events to the rule", () => {
+    for (const doc of events.filter((e) => REQUIRED_SIGNERS[e.event_type as EventType].min === 2)) expect(bindingErrors(doc), doc.event_id).toEqual([]);
+  });
+
+  it("skips a held event with one signature", () => {
+    const doc = bare("custody_transferred", [asParty("sender", PARTY_A)], true);
+    doc.payload = payloads.custody_transferred;
+    expect(bindingErrors(doc)).toEqual([]);
+  });
+});
+
+describe("REQ-EVENT-015 the two signers of a two-party event are distinct parties (REQ-EVENT-003)", () => {
+  const twoParty = EVENT_TYPES.filter((t) => REQUIRED_SIGNERS[t].min === 2);
+
+  it.each(twoParty)("rejects %s signed twice by one party, even with different keys", (type) => {
+    const [first, second] = REQUIRED_SIGNERS[type].roles;
+    const doc = bare(type, [asParty(first!, PARTY_A, "did:key:z6MkOne"), asParty(second!, PARTY_A, "did:key:z6MkTwo")]);
+    expect(bindingErrors(doc)).toContain("two roles are signed by the same party");
+  });
+
+  it("accepts removed and disposition_final signed by two parties", () => {
+    for (const type of ["removed", "disposition_final"] as const) {
+      const [first, second] = REQUIRED_SIGNERS[type].roles;
+      expect(bindingErrors(bare(type, [asParty(first!, PARTY_A), asParty(second!, PARTY_B)])), type).toEqual([]);
+    }
   });
 });
 

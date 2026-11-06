@@ -56,7 +56,7 @@ const sig = (event: EventRow, name: keyof typeof keys, role: string, over: Parti
   ...over,
 });
 
-const custody = (n = 1): EventRow => base(n, "custody_transferred");
+const custody = (n = 1): EventRow => base(n, "custody_transferred", { payload: { from_party_id: party(owners.sender), to_party_id: party(owners.receiver) } });
 const weighed = (n = 2): EventRow => base(n, "weighed");
 
 describe("REQ-LEDGER-001 events append and are never updated", () => {
@@ -139,6 +139,14 @@ describe("REQ-LEDGER-002 an event with too few signatures is held and never fina
     expect((await ledger.projection(TENANT)).map((e) => e.event_id)).toEqual([event.event_id]);
     expect(await ledger.pending(TENANT)).toEqual([]);
     await expect(ledger.countersign(event.event_id, sig(event, "other", "receiver"))).rejects.toThrow(/not held/);
+  });
+
+  it("REQ-EVENT-014 holds a custody event whose sender is not the payload's from_party_id", async () => {
+    const { ledger } = setup();
+    const event = base(1, "custody_transferred", { payload: { from_party_id: party(owners.other), to_party_id: party(owners.receiver) } });
+    const result = await ledger.append({ ...event, signatures: [sig(event, "sender", "sender"), sig(event, "receiver", "receiver")] });
+    expect(result.held).toBe(true);
+    expect(await ledger.projection(TENANT)).toEqual([]);
   });
 
   it("holds a two-party event whose two signers share a role", async () => {
