@@ -8,6 +8,8 @@ import type { CatalogRevision, Method, RevisionKey } from "./catalog";
 
 /** Width of a `life_used_pct` band in points; a constant so a tenant can change it. */
 export const LIFE_BAND_WIDTH = 25;
+/** Fractions plus `residual_kg` must equal the weighed input within this share of it (REQ-DRILL-012). */
+export const MASS_BALANCE_TOLERANCE = 0.02;
 export const POOLED = "pooled";
 export const UNKNOWN_REVISION = "unknown";
 
@@ -30,6 +32,18 @@ export interface Figure {
   basis: Basis;
   leakage: Leakage;
   sources: string[];
+}
+
+/** The diversion rate with the masses it rests on; energy recovery is its own line, not diversion (REQ-DRILL-011). */
+export interface DiversionFigure extends Figure {
+  weighed_kg: number;
+  diverted_kg: number;
+  energy_recovery_kg: number;
+  disposed_kg: number;
+  /** Σ `residual_kg` of the `processed` events: weighed input that reached no fraction (REQ-DRILL-012). */
+  residual_kg: number;
+  /** Assets whose weighed input differs from fractions plus residual by more than `MASS_BALANCE_TOLERANCE`. */
+  unbalanced: number;
 }
 
 export interface JointFigure {
@@ -55,7 +69,7 @@ export interface RevisionRow {
   leakage: Leakage;
   removal: Partial<Record<Method, { p50: Figure; p90: Figure }>>;
   intact_removal_rate: Figure;
-  diversion_pct: Figure;
+  diversion_pct: DiversionFigure;
   joints: JointFigure[];
 }
 
@@ -216,15 +230,32 @@ const jointsOf = (asset: Asset): Joint[] =>
         })),
   );
 
-const diversion = (assets: readonly Asset[], leakage: Leakage): Figure => {
+const sum = (values: readonly number[]): number => values.reduce((s, v) => s + v, 0);
+
+/** Diversion: weighed mass on a reuse or recycling route over the weighed total, with the energy-recovery, disposal and residual masses beside it (REQ-DRILL-011, REQ-DRILL-012). */
+const diversion = (assets: readonly Asset[], leakage: Leakage): DiversionFigure => {
   const weighed = assets.filter((a) => a.weighed);
-  const total = weighed.reduce((sum, a) => sum + Number(a.weighed!.payload.mass_kg), 0);
-  const separated = weighed.reduce(
-    (sum, a) => sum + a.processed.flatMap((p) => (p.payload.fractions ?? []) as { mass_kg: number }[]).reduce((s, f) => s + f.mass_kg, 0),
-    0,
-  );
-  const sources = weighed.flatMap((a) => [a.weighed!.event_id, ...a.processed.map((p) => p.event_id)]);
-  return figure(total === 0 ? null : round((separated / total) * 100), weighed.length, leakage, sources);
+  const total = sum(weighed.map((a) => Number(a.weighed!.payload.mass_kg)));
+  const lines = weighed.flatMap((a) => ((a.final?.payload.lines ?? []) as { mass_kg: number; route: string }[]));
+  const routed = (pick: (route: string) => boolean): number => round(sum(lines.filter((l) => pick(l.route)).map((l) => l.mass_kg)));
+  const diverted = routed((r) => r !== "recovery" && r !== "disposal");
+  const processed = (a: Asset) => a.processed.map((p) => p.payload as { fractions?: { mass_kg: number }[]; residual_kg?: number });
+  const residual = round(sum(weighed.flatMap((a) => processed(a).map((p) => p.residual_kg ?? 0))));
+  const unbalanced = weighed.filter((a) => {
+    const fractions = sum(processed(a).flatMap((p) => (p.fractions ?? []).map((f) => f.mass_kg)));
+    const input = Number(a.weighed!.payload.mass_kg);
+    return Math.abs(input - fractions - sum(processed(a).map((p) => p.residual_kg ?? 0))) > MASS_BALANCE_TOLERANCE * input;
+  }).length;
+  const sources = weighed.flatMap((a) => [a.weighed!.event_id, ...a.processed.map((p) => p.event_id), ...(a.final ? [a.final.event_id] : [])]);
+  return {
+    ...figure(total === 0 ? null : round((diverted / total) * 100), weighed.length, leakage, sources),
+    weighed_kg: round(total),
+    diverted_kg: diverted,
+    energy_recovery_kg: routed((r) => r === "recovery"),
+    disposed_kg: routed((r) => r === "disposal"),
+    residual_kg: residual,
+    unbalanced,
+  };
 };
 
 const jointFigures = (assets: readonly Asset[], leakage: Leakage): JointFigure[] => {

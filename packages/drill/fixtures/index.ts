@@ -124,7 +124,10 @@ export const buildFixture = (): Fixture => {
     ];
     const children = parts.map(() => id("ast", 5000 + ++nextChild));
     const fractions = parts.map((f, i) => ({ material: f.material, mass_kg: kg(f.kg), lot: children[i]!, weighed_event: id("evt", seq + 3 + i) }));
-    emit("processed", asset, at(done, 60), { operation: "separate", before_refs: [asset], after_refs: children, labor_min: item.label === "G4" ? 35 : 14, crew_size: 2, fractions, child_asset_ids: children }, ["facility"]);
+    // The weighed input is the whole 218 kg; what no fraction holds (wear loss, and G4's bonded upholstery) is the recorded
+    // residual, so fractions plus residual equal the input (REQ-DRILL-012).
+    const residual_kg = Math.round((MASS_KG - fractions.reduce((s, f) => s + f.mass_kg, 0)) * 100) / 100;
+    emit("processed", asset, at(done, 60), { operation: "separate", before_refs: [asset], after_refs: children, labor_min: item.label === "G4" ? 35 : 14, crew_size: 2, fractions, residual_kg, child_asset_ids: children }, ["facility"]);
     const scale = { tare_kg: 0, uncertainty: { value_kg: 0.05, basis: "scale accuracy class, k=2" }, scale_id: "scale-1", certification_id: "cert-2026-01" };
     emit("weighed", asset, at(done, 90), { mass_kg: MASS_KG, ...scale }, ["scale"]);
     fractions.forEach((f, i) => {

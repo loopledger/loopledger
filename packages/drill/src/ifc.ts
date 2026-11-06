@@ -71,6 +71,8 @@ const properties = (item: CatalogRevision, row: RevisionRow): [string, Value][] 
   out.push(["leakage_rate", row.leakage.rate === null ? null : { kind: "real", value: row.leakage.rate }]);
   figure("intact_removal_rate", row.intact_removal_rate);
   figure("diversion_pct", row.diversion_pct);
+  for (const name of ["weighed_kg", "diverted_kg", "energy_recovery_kg", "disposed_kg", "residual_kg"] as const) out.push([`diversion_${name}`, { kind: "real", value: row.diversion_pct[name] }]);
+  out.push(["diversion_unbalanced", { kind: "integer", value: row.diversion_pct.unbalanced }]);
   for (const method of ["intact", "destructive"] as const) {
     const removal = row.removal[method];
     if (removal === undefined) continue;

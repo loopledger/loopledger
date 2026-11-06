@@ -1235,3 +1235,15 @@ describe("REQ-EVENT-010 carrier_attached, maintained and record_transferred payl
     expect(eventOk(doc)).toBe(false);
   });
 });
+
+describe("REQ-EVENT-021 processed records the mass that reached no fraction as residual_kg", () => {
+  it("accepts a non-negative residual_kg and rejects a negative or non-numeric one", () => {
+    const doc = event("processed");
+    doc.payload.residual_kg = 12.5;
+    expect(eventOk(doc)).toBe(true);
+    doc.payload.residual_kg = -1;
+    expect(eventOk(doc)).toBe(false);
+    doc.payload.residual_kg = "12";
+    expect(eventOk(doc)).toBe(false);
+  });
+});

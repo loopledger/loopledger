@@ -130,10 +130,21 @@ describe("REQ-DRILL-008 the property values carry their basis and leakage beside
     for (const revision of ["G4", "G5"]) {
       const props = propsOf(revision);
       const figures = [...props.keys()].filter(
-        (k) => !k.endsWith("_basis") && !k.endsWith("_leakage_leaked") && !k.endsWith("_leakage_rate") && !k.startsWith("leakage_") && k !== "assets_removed" && !IDENTITY.includes(k),
+        (k) => !k.endsWith("_basis") && !k.endsWith("_leakage_leaked") && !k.endsWith("_leakage_rate") && !k.startsWith("leakage_") && k !== "assets_removed" && !(k.startsWith("diversion_") && k !== "diversion_pct") && !IDENTITY.includes(k),
       );
       expect(figures.length).toBeGreaterThanOrEqual(4);
       for (const name of figures) expect(props.get(`${name}_basis`), name).toMatch(/^IFCLABEL\('(measured n=\d+|declared)'\)$/);
+    }
+  });
+
+  it("REQ-DRILL-012 writes the diversion masses, the energy-recovery line and the residual beside the rate", () => {
+    for (const revision of ["G4", "G5"]) {
+      const d = rows.find((r) => r.revision === revision && r.band === "pooled")!.diversion_pct;
+      const props = propsOf(revision);
+      expect(props.get("diversion_residual_kg")).toMatch(/^IFCREAL\(/);
+      expect(props.get("diversion_energy_recovery_kg")).toMatch(/^IFCREAL\(/);
+      expect(props.get("diversion_disposed_kg")).toMatch(/^IFCREAL\(/);
+      expect(props.get("diversion_unbalanced")).toBe(`IFCINTEGER(${d.unbalanced})`);
     }
   });
 

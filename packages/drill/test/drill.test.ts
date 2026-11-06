@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import type { EventRow } from "@loopledger/ports";
 import { requiredSigners } from "@loopledger/spec";
 import type { EventType } from "@loopledger/spec";
-import { attributeDifference, compareWithSuccessor, featurePerformance, plan, revisionPerformance } from "../src/index";
+import { MASS_BALANCE_TOLERANCE, attributeDifference, compareWithSuccessor, featurePerformance, plan, revisionPerformance } from "../src/index";
 import type { CatalogRevision, Figure, PlanAsset, RevisionRow } from "../src/index";
 import { loadFixture } from "../fixtures/index";
 import type { Fixture } from "../fixtures/index";
@@ -334,5 +334,73 @@ describe("REQ-DRILL-010 the drill fixtures use per-fraction dispositions", () =>
       expect(lines(e).map((l) => l.route)).toEqual(["redeploy", "redeploy", "redeploy"]);
       expect(lines(e).map(codes)).toEqual([["eu-wfd-2008-98:R12"], ["eu-wfd-2008-98:R12"], ["eu-wfd-2008-98:R12"]]);
     }
+  });
+});
+
+/** The pooled G4 diversion with every `disposition_final` line sent to `route`, or with no line at all when `route` is undefined. */
+const diversionWith = (route: string | undefined) => {
+  const changed = events.map((e) =>
+    e.event_type !== "disposition_final"
+      ? e
+      : { ...e, payload: { ...e.payload, lines: route === undefined ? [] : (e.payload["lines"] as object[]).map((l) => ({ ...l, route })) } },
+  );
+  return revisionPerformance(changed, fixture.catalog).find((r) => r.revision === "G4" && r.band === "pooled")!.diversion_pct;
+};
+
+describe("REQ-DRILL-011 diversion is the weighed mass on a reuse or recycling route over the weighed total", () => {
+  it("reports 0% when every fraction goes to disposal, and counts the mass as disposed", () => {
+    const d = diversionWith("disposal");
+    expect(d.value).toBe(0);
+    expect(d.diverted_kg).toBe(0);
+    expect(d.disposed_kg).toBeGreaterThan(0);
+  });
+
+  it("reports 0% for energy recovery alone and shows it as its own line", () => {
+    const d = diversionWith("recovery");
+    expect(d.value).toBe(0);
+    expect(d.energy_recovery_kg).toBeGreaterThan(0);
+    expect(d.disposed_kg).toBe(0);
+  });
+
+  it("counts an asset with no line as not diverted", () => {
+    expect(diversionWith(undefined).value).toBe(0);
+  });
+
+  it("reports the recycled mass over the weighed total, with G4's vinyl as energy recovery beside it", () => {
+    const d = row("G4").diversion_pct;
+    expect(d.value).toBeCloseTo((d.diverted_kg / d.weighed_kg) * 100, 1);
+    expect(d.diverted_kg).toBeGreaterThan(0);
+    expect(d.energy_recovery_kg).toBeGreaterThan(0);
+    expect(d.diverted_kg + d.energy_recovery_kg + d.disposed_kg).toBeLessThan(d.weighed_kg);
+    expect(row("G5").diversion_pct.energy_recovery_kg).toBe(0);
+    expect(row("G5").diversion_pct.value!).toBeGreaterThan(d.value!);
+  });
+});
+
+describe("REQ-DRILL-012 fractions plus residual_kg equal the weighed input within the tolerance", () => {
+  const sum = (xs: number[]) => xs.reduce((s, x) => s + x, 0);
+
+  it("balances every fixture asset: |weighed − Σ fractions − residual_kg| ≤ MASS_BALANCE_TOLERANCE × weighed", () => {
+    expect(MASS_BALANCE_TOLERANCE).toBe(0.02);
+    const processed = events.filter((e) => e.event_type === "processed");
+    expect(processed.length).toBeGreaterThan(0);
+    for (const p of processed) {
+      const weighed = events.find((e) => e.event_type === "weighed" && e.asset_ids[0] === p.asset_ids[0])!;
+      const input = Number(weighed.payload["mass_kg"]);
+      const fractions = sum((p.payload["fractions"] as { mass_kg: number }[]).map((f) => f.mass_kg));
+      expect(Math.abs(input - fractions - Number(p.payload["residual_kg"]))).toBeLessThanOrEqual(MASS_BALANCE_TOLERANCE * input);
+    }
+  });
+
+  it("reports the residual and no unbalanced asset, and counts an asset whose residual is missing", () => {
+    for (const label of ["G4", "G5"]) {
+      const d = row(label).diversion_pct;
+      expect(d.residual_kg).toBeGreaterThan(0);
+      expect(d.unbalanced).toBe(0);
+    }
+    const stripped = events.map((e) => (e.event_type === "processed" ? { ...e, payload: { ...e.payload, residual_kg: undefined } } : e));
+    const g5 = revisionPerformance(stripped, fixture.catalog).find((r) => r.revision === "G5" && r.band === "pooled")!;
+    // The youngest G5 asset lost only 2% to wear, which is within the tolerance without a recorded residual.
+    expect(g5.diversion_pct.unbalanced).toBe(11);
   });
 });

@@ -432,6 +432,7 @@
         "crew_size": { "type": "integer", "minimum": 1 },
         "joints_opened": { "type": "array", "items": { "$ref": "#/$defs/joint_outcome" } },
         "fractions": { "type": "array", "items": { "$ref": "#/$defs/fraction" } },
+        "residual_kg": { "type": "number", "minimum": 0 },
         "child_asset_ids": { "type": "array", "items": { "$ref": "passport.schema.json#/$defs/asset_id" } },
         "cause": { "$ref": "passport.schema.json#/$defs/cause" }
       },
