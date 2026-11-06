@@ -292,3 +292,32 @@ describe("REQ-PASSPORT-009 the drill keys a catalog revision by manufacturer, mo
     expect(() => plan([{ asset_id: "ast_1", manufacturer: OTHER, model_reference: "BTH-2S", version: 3 }], fixture.catalog, rows)).toThrow(/no intact estimate/);
   });
 });
+
+describe("REQ-DRILL-010 the drill fixtures use per-fraction dispositions", () => {
+  const finals = (label: string) => {
+    const ids = new Set(fixture.assets.filter((a) => a.revision === label).map((a) => a.asset_id));
+    return events.filter((e) => e.event_type === "disposition_final" && ids.has(e.asset_ids[0]!));
+  };
+  type Line = { material: string; mass_kg: number; rd_code: string; facility_party_id: string; end_of_waste: boolean };
+  const lines = (e: EventRow) => e.payload["lines"] as Line[];
+
+  it("gives every disposition one line per fraction with a code, a facility and a mass", () => {
+    for (const e of [...finals("G4"), ...finals("G5")]) {
+      expect(lines(e).length).toBeGreaterThanOrEqual(3);
+      for (const l of lines(e)) expect(l).toMatchObject({ material: expect.stringContaining("/vocab/material/"), rd_code: expect.stringMatching(/^R\d+$/), facility_party_id: expect.stringMatching(/^pty_/) });
+    }
+  });
+
+  it("sends G4's never-separated bonded vinyl to energy recovery, not recycling", () => {
+    expect(finals("G4")).toHaveLength(14);
+    for (const e of finals("G4")) {
+      expect(lines(e).find((l) => l.material.endsWith("/vinyl"))).toMatchObject({ rd_code: "R1", end_of_waste: false });
+      expect(lines(e).filter((l) => l.rd_code !== "R1").map((l) => l.material.split("/").pop())).toEqual(["steel", "plywood"]);
+    }
+  });
+
+  it("keeps G5's separated fractions in reuse", () => {
+    expect(finals("G5")).toHaveLength(12);
+    for (const e of finals("G5")) expect(lines(e).map((l) => l.rd_code)).toEqual(["R12", "R12", "R12"]);
+  });
+});

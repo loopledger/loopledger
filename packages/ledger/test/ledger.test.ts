@@ -340,3 +340,37 @@ describe("REQ-LEDGER-006 tenant_id is checked on read", () => {
     expect(await ledger.projection("other-tenant")).toEqual([]);
   });
 });
+
+describe("REQ-EVENT-017 the ledger refuses a reuse or recycle line for a fraction never separated", () => {
+  const PLYWOOD = "https://loopledger.org/vocab/material/plywood";
+  const VINYL = "https://loopledger.org/vocab/material/vinyl";
+  const line = (rd_code: string, material: string, mass_kg: number) => ({ material, mass_kg, rd_code, facility_party_id: party(2), end_of_waste: false });
+  const disposition = (n: number, family: string, lines: unknown[]): EventRow => base(n, "disposition_final", { payload: { family, lines } });
+  const processed = (n: number): EventRow =>
+    base(n, "processed", { payload: { operation: "sort", fractions: [{ material: PLYWOOD, mass_kg: 60, weighed_event: evt(9) }] } });
+  const append = (ledger: Ledger, event: EventRow) => ledger.append({ ...event, signatures: [sig(event, "receiver", "receiver"), sig(event, "other", "operator")] });
+
+  it("appends a recycle line for a separated material and energy recovery for one that was not", async () => {
+    const { ledger } = setup();
+    const sorted = processed(1);
+    await ledger.append({ ...sorted, signatures: [sig(sorted, "scale", "facility")] });
+    const final = disposition(2, "recycle", [line("R3", PLYWOOD, 60), line("R1", VINYL, 10)]);
+    expect(await append(ledger, final)).toEqual({ event_id: final.event_id, held: false });
+  });
+
+  it("refuses a recycle line for a material no processed event on the asset separated", async () => {
+    const { ledger } = setup();
+    await expect(append(ledger, disposition(2, "recycle", [line("R3", VINYL, 60)]))).rejects.toThrow(/never separated/);
+    const sorted = processed(1);
+    await ledger.append({ ...sorted, signatures: [sig(sorted, "scale", "facility")] });
+    await expect(append(ledger, disposition(3, "recycle", [line("R3", PLYWOOD, 60), line("R4", VINYL, 10)]))).rejects.toThrow(/never separated/);
+    expect((await ledger.log()).map((e) => e.event_type)).toEqual(["processed"]);
+  });
+
+  it("refuses a family that is not the route of the heaviest line", async () => {
+    const { ledger } = setup();
+    const sorted = processed(1);
+    await ledger.append({ ...sorted, signatures: [sig(sorted, "scale", "facility")] });
+    await expect(append(ledger, disposition(2, "disposal", [line("R3", PLYWOOD, 60)]))).rejects.toThrow(/heaviest line/);
+  });
+});

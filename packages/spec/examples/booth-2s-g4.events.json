@@ -213,11 +213,17 @@
     "event_type": "disposition_final",
     "occurred_at": "2026-09-25T10:00:00Z",
     "recorded_at": "2026-09-25T10:10:00Z",
-    "payload": { "family": "recycle", "receiver_doc_refs": ["manifest-hub1-0925"] },
+    "payload": {
+      "family": "recycle",
+      "lines": [
+        { "material": "https://loopledger.org/vocab/material/plywood", "mass_kg": 66.9, "rd_code": "R3", "facility_party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P03", "end_of_waste": true }
+      ],
+      "receiver_doc_refs": ["manifest-hub1-0925"]
+    },
     "held": false,
     "signatures": [
-      { "sig_id": "sig_10a", "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P03", "key_id": "did:key:z6Mkn7XK2aBCMTgPRLvYDYfYXsmi2Dssm2oBHcoYJVcZzLD3", "alg": "EdDSA", "signed_hash": "sha256:b8d8fc6cf449a6cbb5f210652a006f2a8f5025806bcac888f3076b558bba2f37", "signed_at": "2026-09-25T10:11:00Z", "role_at_signing": "receiver", "signature": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa243WEsyYUJDTVRnUFJMdllEWWZZWHNtaTJEc3NtMm9CSGNvWUpWY1p6TEQzIn0..P6SSlD4jTAid86mot6X-kxfC7xa0Id6LxytdCI0rYwt0tFxW9jidil6iPLhR_nIphnITKm1x2zp4SopmVhbOCg" },
-      { "sig_id": "sig_10b", "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P04", "key_id": "did:key:z6MkokCSMdqFhKi8xDQ8tYdLvBTKqiWrpb1a6TEHx5UQhQtb", "alg": "EdDSA", "signed_hash": "sha256:b8d8fc6cf449a6cbb5f210652a006f2a8f5025806bcac888f3076b558bba2f37", "signed_at": "2026-09-25T10:12:00Z", "role_at_signing": "operator", "signature": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa29rQ1NNZHFGaEtpOHhEUTh0WWRMdkJUS3FpV3JwYjFhNlRFSHg1VVFoUXRiIn0..NTanf40nR_sYKC-lkpOErD19VkprKNmdUuJ-X43DiQnCrAvdlyNH8mtWkDVxQ1dvWwtMCt7YaENBxJyUnbtpBw" }
+      { "sig_id": "sig_10a", "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P03", "key_id": "did:key:z6Mkn7XK2aBCMTgPRLvYDYfYXsmi2Dssm2oBHcoYJVcZzLD3", "alg": "EdDSA", "signed_hash": "sha256:eee9e7264fec77906d29d2921f5030ab95324f7cf9b63306e0524b15b458f525", "signed_at": "2026-09-25T10:11:00Z", "role_at_signing": "receiver", "signature": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa243WEsyYUJDTVRnUFJMdllEWWZZWHNtaTJEc3NtMm9CSGNvWUpWY1p6TEQzIn0..k9YLeSiB7B8rtr6pZzjzDq-E6zcZEmIrW3N_hJIZkEUk8AHuNFynRloGXgmQF9Q1MtIB1qCmPARg4x-XItEyAw" },
+      { "sig_id": "sig_10b", "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P04", "key_id": "did:key:z6MkokCSMdqFhKi8xDQ8tYdLvBTKqiWrpb1a6TEHx5UQhQtb", "alg": "EdDSA", "signed_hash": "sha256:eee9e7264fec77906d29d2921f5030ab95324f7cf9b63306e0524b15b458f525", "signed_at": "2026-09-25T10:12:00Z", "role_at_signing": "operator", "signature": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa29rQ1NNZHFGaEtpOHhEUTh0WWRMdkJUS3FpV3JwYjFhNlRFSHg1VVFoUXRiIn0..8hJ5Kpd8QNeYD97ZMa-InJTKZ5SPEyqpkw4luUinumESc_b1RmBAKlOXDAferzgbbwXjlE0hb5PAwBzCW0pGDA" }
     ]
   }
 ]

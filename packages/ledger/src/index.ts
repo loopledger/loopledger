@@ -1,6 +1,6 @@
 // The ledger: an append-only event log with two-party signatures and evidence stored by hash (issue #7).
 // Events are never updated. A countersignature is a new signature row, and `held` is derived from the rows.
-import { EVENT_TYPES, requiredSigners, signerBindingErrors } from "@loopledger/spec";
+import { EVENT_TYPES, dispositionFamilyErrors, dispositionSeparationErrors, requiredSigners, signerBindingErrors } from "@loopledger/spec";
 import type { EventType } from "@loopledger/spec";
 import type { EventRow, EventStore, EvidenceStore, KeyResolver, SignatureRow } from "@loopledger/ports";
 import { VERIFIERS, detachedSignature, eventHash, eventRow, jwsSigningInput, sha256 } from "./crypto";
@@ -49,6 +49,7 @@ export class Ledger {
       else if (target.tenant_id !== event.tenant_id) refuse("correction_of names an event of another tenant");
     }
     for (const ref of event.evidence ?? []) await this.readEvidence(ref.content_hash);
+    if (event.event_type === "disposition_final") await this.disposition(event);
 
     const signatures = input.signatures ?? [];
     const accepted: SignatureRow[] = [];
@@ -130,6 +131,22 @@ export class Ledger {
     if (Number.isNaN(time(event.recorded_at))) refuse("recorded_at is not a timestamp");
     if (event.payload === null || typeof event.payload !== "object" || Array.isArray(event.payload)) refuse("payload must be an object");
     if (event.correction_of !== undefined && !EVENT_ID.test(String(event.correction_of))) refuse("correction_of is not an evt_ ULID");
+  }
+
+  /**
+   * Refuses a `disposition_final` whose `family` is not the route of its heaviest line, or that sends a fraction to
+   * reuse or recycling that no `processed` event on the asset (or the one that birthed it) separated.
+   */
+  private async disposition(event: EventRow): Promise<void> {
+    const processed = (await this.events.readAll())
+      .filter((e) => e.event_type === "processed" && e.tenant_id === event.tenant_id)
+      .filter((e) => {
+        const children = Array.isArray(e.payload["child_asset_ids"]) ? e.payload["child_asset_ids"] : [];
+        return event.asset_ids.some((a) => e.asset_ids.includes(a) || children.includes(a));
+      })
+      .map((e) => e.payload);
+    const errors = [...dispositionFamilyErrors(event.payload), ...dispositionSeparationErrors(event.payload, processed)];
+    if (errors.length > 0) refuse(errors.join("; "));
   }
 
   /** Refuses a signature that does not bind to this event, its key's party and its own fields, or repeats a party. */

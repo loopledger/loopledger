@@ -6,7 +6,7 @@ import Ajv2020 from "ajv/dist/2020.js";
 import addFormats from "ajv-formats";
 import jsonld from "jsonld";
 import { describe, expect, it } from "vitest";
-import { EVENT_TYPES, REQUIRED_SIGNERS, catalogErrors, requiredSigners, signerBindingErrors } from "../src/index";
+import { EVENT_TYPES, REQUIRED_SIGNERS, catalogErrors, dispositionFamilyErrors, dispositionSeparationErrors, requiredSigners, routeGroup, signerBindingErrors } from "../src/index";
 import type { EventType } from "../src/index";
 
 type Json = any;
@@ -707,11 +707,16 @@ describe("REQ-EVENT-015 the two signers of a two-party event are distinct partie
   });
 });
 
-describe("REQ-EVENT-005 disposal needs a linked exception and a cause", () => {
+const PLYWOOD = "https://loopledger.org/vocab/material/plywood";
+const FACILITY = "pty_01JC8K2M4N6P8R0T2V4X6Z8P03";
+const line = (rd_code: string, material = PLYWOOD, mass_kg = 66.9): Json => ({ material, mass_kg, rd_code, facility_party_id: FACILITY, end_of_waste: false });
+
+describe("REQ-EVENT-005 a line with a D code needs a linked exception and a cause", () => {
   const disposal = (): Json => {
     const doc = event("disposition_final");
     doc.payload = {
       family: "disposal",
+      lines: [line("D5")],
       exception_event_id: "evt_01JC8K2M4N6P8R0T2V4X6Z8B91",
       cause: { term: "https://loopledger.org/vocab/cause/no_receiver", design_addressable: false },
     };
@@ -738,6 +743,109 @@ describe("REQ-EVENT-005 disposal needs a linked exception and a cause", () => {
     expect(eventOk(request)).toBe(false);
     request.payload.cause = { term: "https://loopledger.org/vocab/cause/no_receiver", design_addressable: false };
     expect(eventOk(request)).toBe(true);
+  });
+
+  it("requires them for any D line, even when the family is a recovery route", () => {
+    const doc = event("disposition_final");
+    doc.payload.lines.push(line("D10", "https://loopledger.org/vocab/material/vinyl", 10));
+    expect(eventOk(doc)).toBe(false);
+    doc.payload.exception_event_id = "evt_01JC8K2M4N6P8R0T2V4X6Z8B91";
+    doc.payload.cause = { term: "https://loopledger.org/vocab/cause/no_receiver", design_addressable: false };
+    expect(eventOk(doc)).toBe(true);
+  });
+});
+
+describe("REQ-EVENT-016 a disposition carries per-fraction lines", () => {
+  it("accepts the example, whose line has material, mass, R/D code, facility and end-of-waste flag", () => {
+    const doc = event("disposition_final");
+    expect(eventOk(doc)).toBe(true);
+    expect(Object.keys(doc.payload.lines[0]).sort()).toEqual(["end_of_waste", "facility_party_id", "mass_kg", "material", "rd_code"]);
+    expect(dispositionFamilyErrors(doc.payload)).toEqual([]);
+  });
+
+  it("rejects a payload without lines, with none, or with a line missing a field", () => {
+    const none = event("disposition_final");
+    delete none.payload.lines;
+    expect(eventOk(none)).toBe(false);
+    const empty = event("disposition_final");
+    empty.payload.lines = [];
+    expect(eventOk(empty)).toBe(false);
+    for (const field of ["material", "mass_kg", "rd_code", "facility_party_id", "end_of_waste"]) {
+      const doc = event("disposition_final");
+      delete doc.payload.lines[0][field];
+      expect(eventOk(doc), field).toBe(false);
+    }
+  });
+
+  it("accepts R1 to R13 and D1 to D15 and rejects any other code", () => {
+    const ok = (code: string): boolean => {
+      const doc = event("disposition_final");
+      doc.payload.lines = [line(code)];
+      doc.payload.exception_event_id = "evt_01JC8K2M4N6P8R0T2V4X6Z8B91";
+      doc.payload.cause = { term: "https://loopledger.org/vocab/cause/no_receiver", design_addressable: false };
+      return eventOk(doc);
+    };
+    for (let n = 1; n <= 13; n++) expect(ok(`R${n}`), `R${n}`).toBe(true);
+    for (let n = 1; n <= 15; n++) expect(ok(`D${n}`), `D${n}`).toBe(true);
+    for (const code of ["R0", "R14", "D0", "D16", "R01", "r3", "R3 ", "X1", ""]) expect(ok(code), code).toBe(false);
+  });
+
+  it("rejects a line without a facility party, with a negative mass or an unknown field", () => {
+    for (const change of [{ facility_party_id: "HUB1" }, { mass_kg: -1 }, { end_of_waste: "yes" }, { extra: 1 }]) {
+      const doc = event("disposition_final");
+      Object.assign(doc.payload.lines[0], change);
+      expect(eventOk(doc), JSON.stringify(change)).toBe(false);
+    }
+  });
+
+  it("names energy recovery as its own family and derives each line's route from its code", () => {
+    expect(routeGroup("R1")).toBe("recovery");
+    expect(routeGroup("R4")).toBe("recycle");
+    expect(routeGroup("R12")).toBe("reuse");
+    expect(routeGroup("D10")).toBe("disposal");
+    const doc = event("disposition_final");
+    doc.payload.family = "recovery";
+    doc.payload.lines = [line("R1")];
+    expect(eventOk(doc)).toBe(true);
+    expect(dispositionFamilyErrors(doc.payload)).toEqual([]);
+  });
+
+  it("rejects a family that is not the route of the heaviest line", () => {
+    const payload = { family: "disposal", lines: [line("R3", PLYWOOD, 60), line("R1", "https://loopledger.org/vocab/material/vinyl", 6)] };
+    expect(dispositionFamilyErrors(payload)).toHaveLength(1);
+    expect(dispositionFamilyErrors({ ...payload, family: "recycle" })).toEqual([]);
+    expect(dispositionFamilyErrors({ ...payload, family: "redeploy" })).toHaveLength(1);
+    // a tie accepts either route
+    const tie = { lines: [line("R3", PLYWOOD, 5), line("R1", "https://loopledger.org/vocab/material/vinyl", 5)] };
+    expect(dispositionFamilyErrors({ ...tie, family: "recovery" })).toEqual([]);
+    expect(dispositionFamilyErrors({ ...tie, family: "recycle" })).toEqual([]);
+    expect(dispositionFamilyErrors({ ...tie, family: "disposal" })).toHaveLength(1);
+  });
+});
+
+describe("REQ-EVENT-017 a reuse or recycle line for a fraction never separated is rejected", () => {
+  const VINYL = "https://loopledger.org/vocab/material/vinyl";
+  const processed = events.find((e) => e.event_type === "processed" && e.payload.operation === "separate")!;
+
+  it("accepts the example, whose plywood was separated by the processed event that birthed the asset", () => {
+    const doc = event("disposition_final");
+    expect(processed.payload.child_asset_ids).toContain(doc.asset_ids[0]);
+    expect(dispositionSeparationErrors(doc.payload, [processed.payload])).toEqual([]);
+  });
+
+  it("rejects a recycle or reuse line for a material no processed event names", () => {
+    expect(dispositionSeparationErrors({ lines: [line("R3", VINYL)] }, [processed.payload])).toHaveLength(1);
+    expect(dispositionSeparationErrors({ lines: [line("R12", VINYL)] }, [processed.payload])).toHaveLength(1);
+    expect(dispositionSeparationErrors({ lines: [line("R3")] }, [])).toHaveLength(1);
+  });
+
+  it("accepts energy recovery and disposal for a fraction that was never separated", () => {
+    expect(dispositionSeparationErrors({ lines: [line("R1", VINYL), line("D10", VINYL)] }, [processed.payload])).toEqual([]);
+  });
+
+  it("matches the material term exactly", () => {
+    const other = { fractions: [{ material: `${PLYWOOD}_birch`, mass_kg: 1, weighed_event: "evt_01JC8K2M4N6P8R0T2V4X6Z8B09" }] };
+    expect(dispositionSeparationErrors({ lines: [line("R3")] }, [other])).toHaveLength(1);
   });
 });
 

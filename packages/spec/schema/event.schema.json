@@ -430,17 +430,31 @@
         "crew_size": { "type": "integer", "minimum": 1 }
       }
     },
-    "payload_disposition_final": {
+    "disposition_line": {
+      "$comment": "One fraction and where it went. rd_code is an R1-R13 (Annex I) or D1-D15 (Annex II) code of Directive 2008/98/EC, checked by shape only. R1 is energy recovery. That a reuse or recycle line names a separated fraction, and that family is the route of the heaviest line, are checked in packages/spec/src/disposition.ts.",
       "type": "object",
-      "required": ["family"],
+      "required": ["material", "mass_kg", "rd_code", "facility_party_id", "end_of_waste"],
       "additionalProperties": false,
       "properties": {
-        "family": { "enum": ["redeploy", "resale", "donate", "recycle", "disposal"] },
+        "material": { "$ref": "passport.schema.json#/$defs/material_term" },
+        "mass_kg": { "type": "number", "minimum": 0 },
+        "rd_code": { "type": "string", "pattern": "^(R([1-9]|1[0-3])|D([1-9]|1[0-5]))$" },
+        "facility_party_id": { "$ref": "passport.schema.json#/$defs/party_id" },
+        "end_of_waste": { "type": "boolean" }
+      }
+    },
+    "payload_disposition_final": {
+      "type": "object",
+      "required": ["family", "lines"],
+      "additionalProperties": false,
+      "properties": {
+        "family": { "enum": ["redeploy", "resale", "donate", "recycle", "recovery", "disposal"] },
+        "lines": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/disposition_line" } },
         "receiver_doc_refs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
         "exception_event_id": { "$ref": "passport.schema.json#/$defs/event_id" },
         "cause": { "$ref": "passport.schema.json#/$defs/cause" }
       },
-      "if": { "properties": { "family": { "const": "disposal" } }, "required": ["family"] },
+      "if": { "properties": { "lines": { "contains": { "properties": { "rd_code": { "pattern": "^D" } }, "required": ["rd_code"] } } }, "required": ["lines"] },
       "then": { "required": ["exception_event_id", "cause"] }
     },
     "payload_record_transferred": {

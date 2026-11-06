@@ -40,7 +40,7 @@ The exporter is out of scope; this is the mapping it follows (`docs/kickoff/SPEC
 | `processed` | TransformationEvent; `separate` maps assembly to component passports |
 | `maintained` | ObjectEvent, `bizStep: repairing` |
 | `record_transferred` | ObjectEvent with `owning_party` source/destination |
-| `disposition_final` | ObjectEvent with CBV `disposition` (`recycled`, `disposed`…); reuse families in our namespace |
+| `disposition_final` | ObjectEvent with CBV `disposition` (`recycled`, `disposed`…); reuse families in our namespace. One entry per line: its R/D code (R1 energy recovery, R2–R11 recycling, D1–D15 disposal) picks the value |
 | `route_*`, `gate_passed`, `exception_*`, `rule_version_applied` | extension fields in our JSON-LD context |
 | `signatures`, `evidence` | detached JOSE signatures and a hash list in the extension block |
 | `occurred_at`, `recorded_at` | `eventTime`, `recordTime` |

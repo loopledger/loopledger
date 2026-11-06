@@ -116,16 +116,27 @@ export const buildFixture = (): Fixture => {
     const weighedId = id("evt", seq + 2);
     const wear = 1 - (0.2 * life) / 100;
     // Bonded upholstery is not separated: only the frame and the plywood are weighed out as clean fractions.
+    const kg = (value: number): number => Math.round(value * wear * 100) / 100;
     const fractions = [
       { material: `${MATERIAL}steel`, kg: 91.6 },
       { material: `${MATERIAL}plywood`, kg: 87.6 },
       ...(upholsterySeparated ? [{ material: `${MATERIAL}vinyl`, kg: 38.8 }] : []),
-    ].map((f) => ({ material: f.material, mass_kg: Math.round(f.kg * wear * 100) / 100, weighed_event: weighedId }));
+    ].map((f) => ({ material: f.material, mass_kg: kg(f.kg), weighed_event: weighedId }));
     const children = [id("ast", 5000 + ++nextChild), id("ast", 5000 + ++nextChild)];
     emit("processed", asset, at(done, 60), { operation: "separate", before_refs: [asset], after_refs: children, labor_min: item.label === "G4" ? 35 : 14, crew_size: 2, fractions, child_asset_ids: children }, ["facility"]);
     const w = emit("weighed", asset, at(done, 90), { mass_kg: MASS_KG, scale_id: "scale-1", certification_id: "cert-2026-01" }, ["scale"]);
     if (w !== weighedId) throw new Error("the weighed event id moved");
-    emit("disposition_final", asset, at(done, 120), { family: item.label === "G4" ? "recycle" : "redeploy" }, ["receiver", "operator"]);
+    // One line per fraction (REQ-EVENT-016). A separated fraction is recycled (G4) or kept in use (G5); G4's bonded
+    // upholstery was never separated, so it goes to energy recovery and the record claims no vinyl was recycled.
+    const lines = fractions.map((f) => ({
+      material: f.material,
+      mass_kg: f.mass_kg,
+      rd_code: item.label === "G4" ? (f.material.endsWith("/steel") ? "R4" : "R3") : "R12",
+      facility_party_id: party("receiver"),
+      end_of_waste: item.label === "G4",
+    }));
+    if (!upholsterySeparated) lines.push({ material: `${MATERIAL}vinyl`, mass_kg: kg(38.8), rd_code: "R1", facility_party_id: party("receiver"), end_of_waste: false });
+    emit("disposition_final", asset, at(done, 120), { family: item.label === "G4" ? "recycle" : "redeploy", lines }, ["receiver", "operator"]);
   };
 
   // G4: 14 recovered assets, 12 intact and 2 destructive, installed in 2019 and 52 to 97.5 percent through their life.
