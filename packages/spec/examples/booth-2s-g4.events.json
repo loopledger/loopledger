@@ -106,9 +106,9 @@
       "ended_at": "2026-09-20T14:45:00Z",
       "crew_size": 3,
       "joints_opened": [
-        { "joint_id": "j-1", "outcome": "clean", "labor_min": 12 },
-        { "joint_id": "j-2", "outcome": "clean", "labor_min": 12 },
-        { "joint_id": "j-3", "outcome": "damaged", "labor_min": 40 }
+        { "joint_id": "j-1", "joint_type": "https://loopledger.org/vocab/joint_type/bolted", "catalog_ref": { "manufacturer": { "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P08" }, "model_reference": "BTH-2S", "version": 2 }, "outcome": "clean", "labor_min": 12 },
+        { "joint_id": "j-2", "joint_type": "https://loopledger.org/vocab/joint_type/bolted", "catalog_ref": { "manufacturer": { "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P08" }, "model_reference": "BTH-2S", "version": 2 }, "outcome": "clean", "labor_min": 12 },
+        { "joint_id": "j-3", "joint_type": "https://loopledger.org/vocab/joint_type/bonded", "catalog_ref": { "manufacturer": { "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P08" }, "model_reference": "BTH-2S", "version": 2 }, "outcome": "damaged", "labor_min": 40 }
       ],
       "cause": { "term": "https://loopledger.org/vocab/cause/bonded_joint", "design_addressable": true }
     },
@@ -174,7 +174,9 @@
       "after_refs": ["ev-photo-after"],
       "labor_min": 55,
       "crew_size": 2,
-      "joints_opened": [{ "joint_id": "j-4", "outcome": "destroyed", "labor_min": 30 }],
+      "joints_opened": [
+        { "joint_id": "j-4", "joint_type": "https://loopledger.org/vocab/joint_type/bonded", "catalog_ref": { "manufacturer": { "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P08" }, "model_reference": "BTH-2S", "version": 2 }, "outcome": "destroyed", "labor_min": 30 }
+      ],
       "fractions": [{ "material": "https://loopledger.org/vocab/material/plywood", "mass_kg": 66.9, "weighed_event": "evt_01JC8K2M4N6P8R0T2V4X6Z8B09" }],
       "child_asset_ids": ["ast_01JC8K2M4N6P8R0T2V4X6Z8A02"]
     },

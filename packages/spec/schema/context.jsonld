@@ -32,6 +32,8 @@
     "payload": "ll:payload",
     "signatures": { "@id": "ll:signatures", "@container": "@set" },
     "evidence": { "@id": "ll:evidence", "@container": "@set" },
-    "cause": "ll:cause"
+    "cause": "ll:cause",
+    "joint_type": { "@id": "ll:joint_type", "@type": "@id" },
+    "catalog_ref": "ll:catalog_ref"
   }
 }

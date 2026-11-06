@@ -26,7 +26,7 @@ export interface CatalogRevision extends RevisionKey {
 /** The last path segment of a vocabulary IRI: `https://loopledger.org/vocab/joint_type/bonded` is `bonded`. */
 export const termId = (iri: string): string => iri.slice(iri.lastIndexOf("/") + 1);
 
-const keyOf = (ref: Record<string, any>): RevisionKey => ({ manufacturer: ref.manufacturer.party_id, model_reference: ref.model_reference, version: ref.version });
+export const keyOf = (ref: Record<string, any>): RevisionKey => ({ manufacturer: ref.manufacturer.party_id, model_reference: ref.model_reference, version: ref.version });
 
 /** A revision key as one string; a missing version is the unknown revision. Versions are padded so keys sort numerically. */
 export const revisionId = (key: { manufacturer: string; model_reference: string; version: number | null }): string =>

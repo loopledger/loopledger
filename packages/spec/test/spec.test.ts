@@ -747,6 +747,52 @@ describe("REQ-EVENT-009 labor, joint outcomes and weighed fractions on removed a
   });
 });
 
+describe("REQ-EVENT-011 a joint outcome carries the joint type and catalog revision as signed, and an optional cause", () => {
+  it("accepts the example outcomes, which each carry joint_type and catalog_ref", () => {
+    for (const type of ["removed", "processed"]) {
+      const doc = event(type);
+      expect(doc.payload.joints_opened.every((j: Json) => j.joint_type && j.catalog_ref), type).toBe(true);
+      expect(eventOk(doc), type).toBe(true);
+    }
+  });
+
+  it("rejects an outcome with no joint_type or no catalog_ref, or a joint_type outside the scheme", () => {
+    for (const field of ["joint_type", "catalog_ref"]) {
+      const doc = event("removed");
+      delete doc.payload.joints_opened[0][field];
+      expect(eventOk(doc), field).toBe(false);
+    }
+    const doc = event("removed");
+    doc.payload.joints_opened[0].joint_type = "bonded";
+    expect(eventOk(doc)).toBe(false);
+  });
+
+  it("rejects a catalog_ref that is not a revision ref", () => {
+    const doc = event("removed");
+    delete doc.payload.joints_opened[0].catalog_ref.model_reference;
+    expect(eventOk(doc)).toBe(false);
+  });
+
+  it("accepts a design-addressable joint cause with a photo, and rejects it without one", () => {
+    const doc = event("removed");
+    doc.payload.joints_opened[0].cause = { term: "https://loopledger.org/vocab/cause/bonded_joint", design_addressable: true };
+    expect(eventOk(doc)).toBe(true);
+    delete doc.payload.cause;
+    delete doc.evidence;
+    expect(eventOk(doc)).toBe(false);
+    doc.evidence = [{ evidence_id: "ev-doc", kind: "doc", content_hash: `sha256:${"a".repeat(64)}`, storage_ref: "cas://a" }];
+    expect(eventOk(doc)).toBe(false);
+  });
+
+  it("asks for no photo when the joint cause is not design-addressable", () => {
+    const doc = event("removed");
+    delete doc.payload.cause;
+    delete doc.evidence;
+    doc.payload.joints_opened[0].cause = { term: "https://loopledger.org/vocab/cause/removal_damage", design_addressable: false };
+    expect(eventOk(doc)).toBe(true);
+  });
+});
+
 describe("REQ-EVENT-010 carrier_attached, maintained and record_transferred payloads", () => {
   it("rejects carrier_attached without a GS1 Digital Link carrier", () => {
     const doc = event("carrier_attached");

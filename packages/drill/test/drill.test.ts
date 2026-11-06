@@ -90,6 +90,45 @@ describe("REQ-DRILL-002 feature performance attributes the difference to the bon
   });
 });
 
+describe("REQ-DRILL-009 performance reads the signed joint snapshot, and a later revision change does not move an outcome", () => {
+  /** The events as if one G4 asset were later claimed to be a G5: its `asset_born` names G5, its signed outcomes are untouched. */
+  const moved = (): { events: EventRow[]; asset_id: string } => {
+    const asset_id = fixture.assets.find((a) => a.revision === "G4" && a.kind === "recovered")!.asset_id;
+    const g5 = rev("G5");
+    const ref = { manufacturer: { party_id: g5.manufacturer }, model_reference: g5.model_reference, version: g5.version };
+    return {
+      asset_id,
+      events: events.map((e) => (e.event_type === "asset_born" && e.asset_ids[0] === asset_id ? { ...e, payload: { ...e.payload, catalog_ref: ref, revision: { basis: "declared", label: "G5" } } } : e)),
+    };
+  };
+  const shape = (rows: ReturnType<typeof featurePerformance>) => rows.map((f) => ({ type: f.joint_type, materials: f.materials, n: f.n, outcomes: f.outcomes }));
+
+  it("keeps a signed bonded outcome under bonded in the feature rows after the asset's revision moves to G5", () => {
+    const { events: after, asset_id } = moved();
+    expect(row("G4").assets_removed).toBeGreaterThan(revisionPerformance(after, fixture.catalog).find((r) => r.revision === "G4" && r.band === "pooled")!.assets_removed);
+    expect(shape(featurePerformance(after, fixture.catalog))).toEqual(shape(featurePerformance(events, fixture.catalog)));
+    const bonded = featurePerformance(after, fixture.catalog).find((f) => f.joint_type === "bonded")!;
+    const removed = events.find((e) => e.event_type === "removed" && e.asset_ids[0] === asset_id)!;
+    expect(bonded.clean_rate.sources).toContain(removed.event_id);
+  });
+
+  it("keeps the labor of that outcome on the bonded joint in the attribution", () => {
+    const { events: after } = moved();
+    const bonded = attributeDifference(after, fixture.catalog, rev("G4"), rev("G5")).find((s) => s.joint_type === "bonded")!;
+    expect(bonded.faster_min_per_asset).toBeGreaterThan(0);
+    // The moved asset adds no screwed labor: its mean per asset only falls as the G5 group grows by one.
+    const screwed = (list: ReturnType<typeof attributeDifference>) => list.find((s) => s.joint_type === "screwed")!.faster_min_per_asset;
+    expect(screwed(attributeDifference(after, fixture.catalog, rev("G4"), rev("G5")))).toBeLessThan(screwed(attributeDifference(events, fixture.catalog, rev("G4"), rev("G5"))));
+  });
+
+  it("does not pool j-3 bonded with j-3 screwed in a revision row", () => {
+    const { events: after } = moved();
+    const pooled = revisionPerformance(after, fixture.catalog).find((r) => r.revision === "G5" && r.band === "pooled")!;
+    const j3 = pooled.joints.filter((j) => j.joint_id === "j-3");
+    expect(j3.map((j) => j.joint_type).sort()).toEqual(["bonded", "screwed"]);
+  });
+});
+
 describe("REQ-DRILL-003 a mixed G4/G5 event plans each asset by its own revision", () => {
   const asset = (n: number, label?: string, method?: "intact" | "destructive"): PlanAsset => ({
     asset_id: `ast_${n}`,

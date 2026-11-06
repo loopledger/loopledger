@@ -16,6 +16,7 @@ import type { CatalogRevision } from "../src/catalog";
 export const TENANT = "acme-hospitality";
 
 const MATERIAL = "https://loopledger.org/vocab/material/";
+const JOINT_TYPE = "https://loopledger.org/vocab/joint_type/";
 
 const CROCKFORD = ["0123456789", "ABCDEFGH", "JKMNPQRST", "VWXYZ"].join("");
 /** A prefixed 26-character ULID-shaped id: a fixed head and the counter in Crockford base32. */
@@ -93,12 +94,21 @@ export const buildFixture = (): Fixture => {
     return asset_id;
   };
 
+  /** A joint outcome as signed: the joint type and catalog revision are those of the revision the asset is recovered as (REQ-EVENT-011). */
+  const jointOutcome = (item: CatalogRevision, joint_id: string, outcome: string, labor_min: number) => ({
+    joint_id,
+    joint_type: `${JOINT_TYPE}${item.joints.find((j) => j.joint_id === joint_id)!.type}`,
+    catalog_ref: { manufacturer: { party_id: item.manufacturer }, model_reference: item.model_reference, version: item.version },
+    outcome,
+    labor_min,
+  });
+
   const MASS_KG = 218;
   // Removal labor is the labor of the joints plus an overhead that grows with the life used, so a pooled comparison
   // adds an age effect to the design effect. Bolted joints cost the same in both revisions.
   const recover = (item: CatalogRevision, installed: string, day: string, i: number, life: number, joints: Record<string, [string, number]>, method: "intact" | "destructive", upholsterySeparated: boolean): void => {
     const asset = born(item, installed, "recovered", life);
-    const joints_opened = Object.entries(joints).map(([joint_id, [outcome, labor_min]]) => ({ joint_id, outcome, labor_min }));
+    const joints_opened = Object.entries(joints).map(([joint_id, [outcome, labor_min]]) => jointOutcome(item, joint_id, outcome, labor_min));
     const started = `${day}T${String(9 + (i % 4)).padStart(2, "0")}:00:00Z`;
     const labor = joints_opened.reduce((s, j) => s + j.labor_min, 0) + 10 + Math.round(0.3 * life);
     emit("telemetry", asset, at(started, -5), { metric: "life_used_pct", value: life, source_device: "dock-meter-1" }, ["device"]);
@@ -143,7 +153,7 @@ export const buildFixture = (): Fixture => {
     "removed",
     heldAsset,
     "2026-10-20T09:00:00Z",
-    { cluster: "dining-room-north", method: "intact", started_at: "2026-10-20T09:00:00Z", ended_at: "2026-10-20T09:05:00Z", crew_size: 2, joints_opened: [{ joint_id: "j-3", outcome: "clean", labor_min: 1 }] },
+    { cluster: "dining-room-north", method: "intact", started_at: "2026-10-20T09:00:00Z", ended_at: "2026-10-20T09:05:00Z", crew_size: 2, joints_opened: [jointOutcome(g5, "j-3", "clean", 1)] },
     ["crew"],
   );
 

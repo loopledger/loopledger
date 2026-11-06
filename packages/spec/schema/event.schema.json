@@ -53,6 +53,28 @@
         "properties": { "evidence": { "contains": { "properties": { "kind": { "const": "photo" } }, "required": ["kind"] } } }
       }
     },
+    {
+      "$comment": "The same rule for the cause of a joint outcome (REQ-EVENT-011).",
+      "if": {
+        "properties": {
+          "payload": {
+            "type": "object",
+            "properties": {
+              "joints_opened": {
+                "type": "array",
+                "contains": { "type": "object", "properties": { "cause": { "type": "object", "properties": { "design_addressable": { "const": true } }, "required": ["design_addressable"] } }, "required": ["cause"] }
+              }
+            },
+            "required": ["joints_opened"]
+          }
+        },
+        "required": ["payload"]
+      },
+      "then": {
+        "required": ["evidence"],
+        "properties": { "evidence": { "contains": { "properties": { "kind": { "const": "photo" } }, "required": ["kind"] } } }
+      }
+    },
     { "if": { "properties": { "event_type": { "const": "asset_born" } }, "required": ["event_type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_asset_born" } } } },
     { "if": { "properties": { "event_type": { "const": "carrier_attached" } }, "required": ["event_type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_carrier_attached" } } } },
     { "if": { "properties": { "event_type": { "const": "observed" } }, "required": ["event_type"] }, "then": { "properties": { "payload": { "$ref": "#/$defs/payload_observed" } } } },
@@ -225,13 +247,17 @@
       }
     },
     "joint_outcome": {
+      "$comment": "joint_id is local to a passport revision; joint_type and catalog_ref are the joint as it was when this event was signed, so a later revision claim cannot move the outcome onto another joint type. A cause here needs photo evidence when design-addressable (allOf above).",
       "type": "object",
-      "required": ["joint_id", "outcome", "labor_min"],
+      "required": ["joint_id", "joint_type", "catalog_ref", "outcome", "labor_min"],
       "additionalProperties": false,
       "properties": {
         "joint_id": { "type": "string", "minLength": 1 },
+        "joint_type": { "$ref": "passport.schema.json#/$defs/joint_type_term" },
+        "catalog_ref": { "$ref": "passport.schema.json#/$defs/catalog_ref" },
         "outcome": { "enum": ["clean", "damaged", "destroyed"] },
-        "labor_min": { "type": "number", "minimum": 0 }
+        "labor_min": { "type": "number", "minimum": 0 },
+        "cause": { "$ref": "passport.schema.json#/$defs/cause" }
       }
     },
     "fraction": {

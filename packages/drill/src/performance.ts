@@ -3,7 +3,7 @@
 // `Ledger.pending(tenant)` is optional and only marks assets whose removal is held (REQ-DRILL-006).
 // Every figure carries its basis, the leakage of the revision it measures and the event_ids it was folded from.
 import type { EventRow } from "@loopledger/ports";
-import { revisionId, successorOf } from "./catalog";
+import { keyOf, revisionId, successorOf, termId } from "./catalog";
 import type { CatalogRevision, Method, RevisionKey } from "./catalog";
 
 /** Width of a `life_used_pct` band in points; a constant so a tenant can change it. */
@@ -34,6 +34,8 @@ export interface Figure {
 
 export interface JointFigure {
   joint_id: string;
+  /** The joint type signed with the outcomes. */
+  joint_type: string;
   outcomes: { clean: number; damaged: number; destroyed: number };
   clean_rate: Figure;
   labor_p50: Figure;
@@ -91,6 +93,10 @@ type Outcome = "clean" | "damaged" | "destroyed";
 interface Joint {
   event_id: string;
   joint_id: string;
+  /** The joint type as signed at event time, not the asset's current revision's (REQ-DRILL-009). */
+  joint_type: string;
+  /** The catalog revision signed with the outcome. */
+  revision: RevisionKey;
   outcome: Outcome;
   labor_min: number;
 }
@@ -195,9 +201,19 @@ const leakageOf = (assets: readonly Asset[]): Leakage => {
 
 const figure = (value: number | null, n: number, leakage: Leakage, sources: readonly string[]): Figure => ({ value, basis: { kind: "measured", n }, leakage, sources: [...sources] });
 
+/** The outcomes of an asset's removal and processing, each with the joint type and catalog revision signed with it (REQ-EVENT-011). */
 const jointsOf = (asset: Asset): Joint[] =>
   [asset.removed, ...asset.processed].flatMap((e) =>
-    e === undefined ? [] : ((e.payload.joints_opened ?? []) as { joint_id: string; outcome: Outcome; labor_min: number }[]).map((j) => ({ event_id: e.event_id, ...j })),
+    e === undefined
+      ? []
+      : ((e.payload.joints_opened ?? []) as { joint_id: string; joint_type: string; catalog_ref: Record<string, any>; outcome: Outcome; labor_min: number }[]).map((j) => ({
+          event_id: e.event_id,
+          joint_id: j.joint_id,
+          joint_type: termId(j.joint_type),
+          revision: keyOf(j.catalog_ref),
+          outcome: j.outcome,
+          labor_min: j.labor_min,
+        })),
   );
 
 const diversion = (assets: readonly Asset[], leakage: Leakage): Figure => {
@@ -212,15 +228,21 @@ const diversion = (assets: readonly Asset[], leakage: Leakage): Figure => {
 };
 
 const jointFigures = (assets: readonly Asset[], leakage: Leakage): JointFigure[] => {
+  // A joint_id is local to a revision: the same id under two signed joint types is two joints.
   const byJoint = new Map<string, Joint[]>();
-  for (const j of assets.flatMap(jointsOf)) byJoint.set(j.joint_id, [...(byJoint.get(j.joint_id) ?? []), j]);
+  for (const j of assets.flatMap(jointsOf)) {
+    const key = `${j.joint_type}\u0000${j.joint_id}`;
+    byJoint.set(key, [...(byJoint.get(key) ?? []), j]);
+  }
   return [...byJoint.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([joint_id, list]) => {
+    .map(([, list]) => {
+      const { joint_id, joint_type } = list[0]!;
       const count = (o: Outcome) => list.filter((j) => j.outcome === o).length;
       const sources = list.map((j) => j.event_id);
       return {
         joint_id,
+        joint_type,
         outcomes: { clean: count("clean"), damaged: count("damaged"), destroyed: count("destroyed") },
         clean_rate: figure(round(count("clean") / list.length), list.length, leakage, sources),
         labor_p50: figure(percentile(list.map((j) => j.labor_min), 0.5), list.length, leakage, sources),
@@ -377,8 +399,15 @@ const featureOf = (item: CatalogRevision, jointId: string): Feature | undefined 
   return a === undefined || b === undefined ? undefined : { joint_type: joint.type, materials: [a, b].sort() as [string, string] };
 };
 
-const catalogOf = (catalog: readonly CatalogRevision[], asset: Asset): CatalogRevision | undefined =>
-  catalog.find((c) => groupKey(c) === groupKey(asset));
+/**
+ * The feature of a signed outcome: the joint type as signed, and the material pair of that joint in the catalog revision
+ * named by the signed `catalog_ref`, never the asset's current revision (REQ-DRILL-009).
+ */
+const signedFeatureOf = (catalog: readonly CatalogRevision[], joint: Joint): Feature | undefined => {
+  const item = catalog.find((c) => groupKey(c) === groupKey(joint.revision));
+  const feature = item && featureOf(item, joint.joint_id);
+  return feature && { joint_type: joint.joint_type, materials: feature.materials };
+};
 
 /**
  * The same outcomes folded by joint type × material pair instead of revision, so evidence carries across revisions
@@ -398,11 +427,12 @@ export const featurePerformance = (events: readonly EventRow[], catalog: readonl
     }
   }
   for (const a of assets) {
-    const item = catalogOf(catalog, a);
-    if (!item) continue;
     for (const j of jointsOf(a)) {
-      const feature = featureOf(item, j.joint_id);
-      if (feature) byFeature.get(featureKey(feature))!.joints.push(j);
+      const feature = signedFeatureOf(catalog, j);
+      if (!feature) continue;
+      const entry = byFeature.get(featureKey(feature)) ?? { feature, joints: [], revisions: new Map<string, string>() };
+      entry.joints.push(j);
+      byFeature.set(featureKey(feature), entry);
     }
   }
   return [...byFeature.entries()]
@@ -446,10 +476,8 @@ export const attributeDifference = (events: readonly EventRow[], catalog: readon
     const group = assets.filter((a) => groupKey(a) === groupKey(revision));
     const totals = new Map<string, { feature: Feature; minutes: number }>();
     for (const a of group) {
-      const item = catalogOf(catalog, a);
-      if (!item) continue;
       for (const j of jointsOf(a)) {
-        const feature = featureOf(item, j.joint_id);
+        const feature = signedFeatureOf(catalog, j);
         if (!feature) continue;
         const entry = totals.get(featureKey(feature)) ?? { feature, minutes: 0 };
         entry.minutes += j.labor_min / group.length;
