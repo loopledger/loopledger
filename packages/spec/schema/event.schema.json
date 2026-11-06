@@ -219,18 +219,19 @@
   ],
   "$defs": {
     "signature": {
-      "$comment": "alg is mandatory: crypto-agility is schema law (SPEC-data-model.md §7). No curve is hard-coded.",
+      "$comment": "alg is mandatory: crypto-agility is schema law (SPEC-data-model.md §7), so a second suite is an addition to the enum. `signature` is a detached JWS (RFC 7515 App. F) whose protected header is the JCS of {alg, kid} with kid equal to key_id; the signing input is in packages/spec/README.md, Signatures. The header match is not expressible in JSON Schema and is checked by verifiers.",
       "type": "object",
-      "required": ["sig_id", "party_id", "key_id", "alg", "signed_hash", "signed_at", "role_at_signing"],
+      "required": ["sig_id", "party_id", "key_id", "alg", "signed_hash", "signed_at", "role_at_signing", "signature"],
       "additionalProperties": false,
       "properties": {
         "sig_id": { "type": "string", "minLength": 1 },
         "party_id": { "$ref": "passport.schema.json#/$defs/party_id" },
         "key_id": { "type": "string", "minLength": 1 },
-        "alg": { "type": "string", "minLength": 1 },
+        "alg": { "enum": ["EdDSA"] },
         "signed_hash": { "$ref": "passport.schema.json#/$defs/sha256" },
         "signed_at": { "$ref": "passport.schema.json#/$defs/timestamp" },
-        "role_at_signing": { "type": "string", "minLength": 1 }
+        "role_at_signing": { "type": "string", "minLength": 1 },
+        "signature": { "type": "string", "pattern": "^[A-Za-z0-9_-]+\\.\\.[A-Za-z0-9_-]+$" }
       }
     },
     "evidence": {

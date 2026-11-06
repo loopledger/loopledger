@@ -4,10 +4,10 @@
 //
 // Every event is signed with throwaway Ed25519 keys generated when the fixture is built: no key is written to a file.
 // The catalog items are read from the example passports in packages/spec, so the drill and the schema agree on them.
-import { createPublicKey, generateKeyPairSync, sign } from "node:crypto";
+import { createPublicKey, generateKeyPairSync } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { MemoryEventStore, MemoryEvidenceStore, MemoryKeyResolver } from "@loopledger/adapter-memory";
-import { Ledger, eventHash, signingInput } from "@loopledger/ledger";
+import { Ledger, signEvent } from "@loopledger/ledger";
 import type { EventInput } from "@loopledger/ledger";
 import type { KeyRecord, SignatureRow } from "@loopledger/ports";
 import { catalogRevision } from "../src/catalog";
@@ -57,7 +57,7 @@ export const buildFixture = (): Fixture => {
   const keys: KeyRecord[] = ROLES.map((role) => ({
     key_id: `key-${role}`,
     party_id: party(role),
-    alg: "Ed25519",
+    alg: "EdDSA",
     public_key: createPublicKey(pairs.get(role)!.privateKey).export({ format: "der", type: "spki" }).toString("base64"),
     valid_from: "2018-01-01T00:00:00Z",
     valid_until: "2030-01-01T00:00:00Z",
@@ -69,10 +69,9 @@ export const buildFixture = (): Fixture => {
   const at = (iso: string, plusMin = 0): string => new Date(Date.parse(iso) + plusMin * 60000).toISOString().replace(".000Z", "Z");
   const emit = (type: string, asset: string, occurred: string, payload: Record<string, unknown>, signers: Role[]): string => {
     const event = { event_id: id("evt", ++seq), tenant_id: TENANT, event_type: type, asset_ids: [asset], occurred_at: occurred, recorded_at: at(occurred, 5), payload };
-    const signatures: SignatureRow[] = signers.map((role) => {
-      const body = { signed_hash: eventHash(event), party_id: party(role), role_at_signing: role, signed_at: at(occurred, 6) };
-      return { sig_id: `sig_${++sigs}`, key_id: `key-${role}`, alg: "Ed25519", ...body, signature: sign(null, signingInput(body), pairs.get(role)!.privateKey).toString("base64") };
-    });
+    const signatures: SignatureRow[] = signers.map((role) =>
+      signEvent(event, pairs.get(role)!.privateKey, { sig_id: `sig_${++sigs}`, key_id: `key-${role}`, party_id: party(role), role_at_signing: role, signed_at: at(occurred, 6) }),
+    );
     events.push({ ...event, signatures });
     return event.event_id;
   };

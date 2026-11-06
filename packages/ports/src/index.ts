@@ -9,12 +9,12 @@ export interface Signature {
   signed_hash: string;
   signed_at: string;
   role_at_signing: string;
-}
-
-/** A signature row as stored. `signature` is the base64 signature value; the spec's signature object has no field for it. */
-export interface SignatureRow extends Signature {
+  /** The detached JWS (RFC 7515 App. F), `header..signature`: the authoritative signature value. */
   signature: string;
 }
+
+/** A signature row as stored: the spec's signature object. */
+export type SignatureRow = Signature;
 
 export interface EvidenceRef {
   evidence_id: string;

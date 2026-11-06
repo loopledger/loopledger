@@ -75,20 +75,22 @@
         {
           "sig_id": "sig_grant_01",
           "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P01",
-          "key_id": "did:key:z6MkTenantOperatorKey",
+          "key_id": "did:key:z6Mkgfv76Qix9QTv6JA5bj8tW8MVbbPrjoAm24aYm29XASg1",
           "alg": "EdDSA",
-          "signed_hash": "sha256:a1b2c3d4e5f60718a1b2c3d4e5f60718a1b2c3d4e5f60718a1b2c3d4e5f60718",
+          "signed_hash": "sha256:2303dea91f473d09115a6f4511736f0bed8baff0417178ba41a90a591c93701d",
           "signed_at": "2026-02-01T09:00:00Z",
-          "role_at_signing": "tenant"
+          "role_at_signing": "tenant",
+          "signature": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa2dmdjc2UWl4OVFUdjZKQTViajh0VzhNVmJiUHJqb0FtMjRhWW0yOVhBU2cxIn0..JyB8M89EsSBh-Sx6WKtxNuS7ekefDVteHG4eEzJBaMXJ_e8Mfcoqe_SEdK6P9fVYE0m4eIX873kvzdkyPg-OCw"
         },
         {
           "sig_id": "sig_grant_02",
           "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P09",
-          "key_id": "did:key:z6MkDesignerKey",
+          "key_id": "did:key:z6Mkv7nYgZYFpBg7YXugzt6bR8DGTzET4xADmC5A2v9igHVP",
           "alg": "EdDSA",
-          "signed_hash": "sha256:a1b2c3d4e5f60718a1b2c3d4e5f60718a1b2c3d4e5f60718a1b2c3d4e5f60718",
+          "signed_hash": "sha256:2303dea91f473d09115a6f4511736f0bed8baff0417178ba41a90a591c93701d",
           "signed_at": "2026-02-01T10:00:00Z",
-          "role_at_signing": "grantee"
+          "role_at_signing": "grantee",
+          "signature": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa3Y3bllnWllGcEJnN1lYdWd6dDZiUjhER1R6RVQ0eEFEbUM1QTJ2OWlnSFZQIn0..r1z5UrPFbrFsvHmHdkTIe53yvlq4jus99Xregox5wztYiL-EM7_u_dhS3Tgw4vxYfF6h2QtoWPai0ZP7lqtBCg"
         }
       ]
     }

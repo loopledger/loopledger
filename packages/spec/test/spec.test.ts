@@ -1,3 +1,4 @@
+import { createHash, createPublicKey, verify } from "node:crypto";
 import { readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -31,6 +32,43 @@ const seat = read("examples/booth-2s-g4-seat.passport.json");
 const events: Json[] = read("examples/booth-2s-g4.events.json");
 const event = (type: string, nth = 0): Json => structuredClone(events.filter((e) => e.event_type === type)[nth]);
 const copy = (doc: Json): Json => structuredClone(doc);
+
+// An independent check of the detached JWS, written from packages/spec/README.md (Signatures) alone: it shares no code
+// with the ledger.
+const jcs = (v: Json): string => {
+  if (v === null || typeof v !== "object") return JSON.stringify(v);
+  if (Array.isArray(v)) return `[${v.map(jcs).join(",")}]`;
+  const keys = Object.keys(v).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+  return `{${keys.map((k) => `${JSON.stringify(k)}:${jcs(v[k])}`).join(",")}}`;
+};
+const header = (s: Json): Json => JSON.parse(Buffer.from(s.signature.split(".")[0], "base64url").toString());
+const B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+/** The 32-byte Ed25519 public key of a `did:key:z6Mk…` identifier (multibase base58btc, multicodec 0xed01). */
+const didKeyPublic = (kid: string): Buffer => {
+  let n = 0n;
+  for (const c of kid.slice("did:key:z".length)) n = n * 58n + BigInt(B58.indexOf(c));
+  const bytes = Buffer.from(n.toString(16).padStart(68, "0"), "hex");
+  expect([...bytes.subarray(0, 2)]).toEqual([0xed, 0x01]);
+  return bytes.subarray(2);
+};
+const SPKI_ED25519 = Buffer.from("302a300506032b6570032100", "hex");
+/** The signed event or grant: the document without `signatures` and `held`. */
+const subject = (doc: Json): Json => {
+  const { signatures: _s, held: _h, ...rest } = doc;
+  return rest;
+};
+const jwsVerifies = (doc: Json, s: Json): boolean => {
+  const [h, payload, value] = s.signature.split(".");
+  const body = jcs({
+    event: subject(doc),
+    evidence_hashes: (doc.evidence ?? []).map((e: Json) => e.content_hash).sort(),
+    party_id: s.party_id,
+    role_at_signing: s.role_at_signing,
+    signed_at: s.signed_at,
+  });
+  const key = createPublicKey({ key: Buffer.concat([SPKI_ED25519, didKeyPublic(s.key_id)]), format: "der", type: "spki" });
+  return payload === "" && h === Buffer.from(jcs({ alg: s.alg, kid: s.key_id })).toString("base64url") && verify(null, Buffer.from(`${h}.${Buffer.from(body).toString("base64url")}`), key, Buffer.from(value, "base64url"));
+};
 
 const signatureErrors = (doc: Json): boolean => {
   eventCheck(doc);
@@ -549,6 +587,7 @@ const sign = (role: string, n: number): Json => ({
   signed_hash: `sha256:${"a".repeat(64)}`,
   signed_at: "2026-09-20T15:01:00Z",
   role_at_signing: role,
+  signature: "aGVhZGVy..c2lnbmF0dXJl",
 });
 const bare = (type: EventType, signatures: Json[], held = false): Json => ({
   "@context": ["https://loopledger.org/schema/v0.1/context.jsonld"],
@@ -663,7 +702,7 @@ describe("REQ-EVENT-006 a design-addressable cause needs photo evidence", () => 
   });
 });
 
-describe("REQ-EVENT-007 alg is mandatory on signatures", () => {
+describe("REQ-EVENT-007 alg is mandatory on signatures and is EdDSA", () => {
   it("rejects an event whose signature has no alg, or an empty one", () => {
     const missing = event("weighed");
     delete missing.signatures[0].alg;
@@ -673,16 +712,83 @@ describe("REQ-EVENT-007 alg is mandatory on signatures", () => {
     expect(eventOk(empty)).toBe(false);
   });
 
-  it("accepts any named algorithm, so a second suite is an addition", () => {
+  it("accepts EdDSA only: the legacy Ed25519 string and any other suite are rejected until the enum adds one", () => {
     const doc = event("weighed");
-    doc.signatures[0].alg = "ML-DSA-65";
     expect(eventOk(doc)).toBe(true);
+    for (const alg of ["Ed25519", "ML-DSA-65"]) {
+      doc.signatures[0].alg = alg;
+      expect(eventOk(doc), alg).toBe(false);
+    }
+  });
+
+  it("carries the alg in the JWS protected header, equal to the alg field", () => {
+    for (const doc of [...events, ...booth.data_grants]) {
+      for (const s of doc.signatures) expect(header(s).alg).toBe(s.alg);
+    }
   });
 
   it("rejects a data-grant signature without alg", () => {
     const grant = copy(booth.data_grants[0]);
     delete grant.signatures[0].alg;
     expect(grantCheck(grant)).toBe(false);
+  });
+});
+
+describe("REQ-EVENT-012 a signature carries a detached JWS", () => {
+  it("requires the signature value, in the shape header..signature", () => {
+    const missing = event("weighed");
+    delete missing.signatures[0].signature;
+    expect(eventOk(missing)).toBe(false);
+    for (const bad of ["", "header", "a.b.c", "aGVhZGVy.c2ln", "..c2ln", "aGVhZGVy..", "aGVhZGVy..c2ln=", "aGVhZGVy..c2ln!"]) {
+      const doc = event("weighed");
+      doc.signatures[0].signature = bad;
+      expect(eventOk(doc), bad).toBe(false);
+    }
+    const grant = copy(booth.data_grants[0]);
+    delete grant.signatures[0].signature;
+    expect(grantCheck(grant)).toBe(false);
+  });
+
+  it("has a protected header that is the JCS of alg and the key_id as kid, in every example", () => {
+    for (const doc of [...events, ...booth.data_grants]) {
+      for (const s of doc.signatures) {
+        expect(s.signature.split(".")[1]).toBe("");
+        expect(Buffer.from(s.signature.split(".")[0], "base64url").toString()).toBe(jcs({ alg: s.alg, kid: s.key_id }));
+        expect(header(s).kid).toBe(s.key_id);
+      }
+    }
+  });
+});
+
+describe("REQ-EVENT-013 the signing input is defined and the examples verify against it", () => {
+  it("verifies every example event and data-grant signature with an independent JWS check", () => {
+    let checked = 0;
+    for (const doc of [...events, ...booth.data_grants]) {
+      for (const s of doc.signatures) {
+        expect(jwsVerifies(doc, s), s.sig_id).toBe(true);
+        checked += 1;
+      }
+    }
+    expect(checked).toBe(16);
+  });
+
+  it("keeps signed_hash as the digest of the JCS of the event and its evidence hashes", () => {
+    for (const doc of [...events, ...booth.data_grants]) {
+      const digest = `sha256:${createHash("sha256").update(jcs({ event: subject(doc), evidence_hashes: (doc.evidence ?? []).map((e: Json) => e.content_hash).sort() })).digest("hex")}`;
+      for (const s of doc.signatures) expect(s.signed_hash, s.sig_id).toBe(digest);
+    }
+  });
+
+  it("stops verifying when the event, the party, the role, the time or the key changes", () => {
+    const doc = event("weighed");
+    const s = doc.signatures[0];
+    expect(jwsVerifies(doc, s)).toBe(true);
+    const edited = copy(doc);
+    edited.payload = { ...edited.payload, mass_kg: 1 };
+    expect(jwsVerifies(edited, s)).toBe(false);
+    for (const change of [{ party_id: "pty_01JC8K2M4N6P8R0T2V4X6Z8P99" }, { role_at_signing: "receiver" }, { signed_at: "2030-01-01T00:00:00Z" }, { key_id: events[0].signatures[0].key_id }]) {
+      expect(jwsVerifies(doc, { ...s, ...change })).toBe(false);
+    }
   });
 });
 

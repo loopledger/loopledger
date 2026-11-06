@@ -17,7 +17,7 @@
     },
     "held": false,
     "signatures": [
-      { "sig_id": "sig_01", "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P07", "key_id": "did:key:z6MkAdapterKey", "alg": "EdDSA", "signed_hash": "sha256:a1b2c3d4e5f60718a1b2c3d4e5f60718a1b2c3d4e5f60718a1b2c3d4e5f60718", "signed_at": "2026-02-02T08:00:01Z", "role_at_signing": "adapter" }
+      { "sig_id": "sig_01", "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P07", "key_id": "did:key:z6MkqLCRrz68dJhmX6oKqcKDB64YT9SmA3tf1LGFu49FBJbs", "alg": "EdDSA", "signed_hash": "sha256:ec419850bc73a189489aca99431a2262905f1d247b81b9a4832074e82786c488", "signed_at": "2026-02-02T08:00:01Z", "role_at_signing": "adapter", "signature": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa3FMQ1JyejY4ZEpobVg2b0txY0tEQjY0WVQ5U21BM3RmMUxHRnU0OUZCSmJzIn0..zkW7l_OmKqPiiLWflt5N_UdOKLqTiNhR_EJ4wJJZ4huRQTqUspk1XNQ-ZOlmVWbP_cS5HG0ZDevTsKNdnXmOBg" }
     ]
   },
   {
@@ -40,7 +40,7 @@
     },
     "held": false,
     "signatures": [
-      { "sig_id": "sig_02", "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P01", "key_id": "did:key:z6MkTenantOperatorKey", "alg": "EdDSA", "signed_hash": "sha256:a1b2c3d4e5f60718a1b2c3d4e5f60718a1b2c3d4e5f60718a1b2c3d4e5f60718", "signed_at": "2026-02-02T09:00:06Z", "role_at_signing": "operator" }
+      { "sig_id": "sig_02", "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P01", "key_id": "did:key:z6Mkgfv76Qix9QTv6JA5bj8tW8MVbbPrjoAm24aYm29XASg1", "alg": "EdDSA", "signed_hash": "sha256:e0089683efb9e0c37410c595d7aa7aefcc6ae98f8f61d37ee131863d922bf194", "signed_at": "2026-02-02T09:00:06Z", "role_at_signing": "operator", "signature": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa2dmdjc2UWl4OVFUdjZKQTViajh0VzhNVmJiUHJqb0FtMjRhWW0yOVhBU2cxIn0..LIWfnvIUj5JqlY0XQeV3ysJ-X7vivD_hiuPbKvdbox2v4s6ike6b4-kxcvgFnkNJWJ8FFiQ8BQRIpNA79UCBBA" }
     ]
   },
   {
@@ -61,8 +61,8 @@
     },
     "held": false,
     "signatures": [
-      { "sig_id": "sig_03a", "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P01", "key_id": "did:key:z6MkTenantOperatorKey", "alg": "EdDSA", "signed_hash": "sha256:a1b2c3d4e5f60718a1b2c3d4e5f60718a1b2c3d4e5f60718a1b2c3d4e5f60718", "signed_at": "2026-03-01T12:01:00Z", "role_at_signing": "transferring_owner" },
-      { "sig_id": "sig_03b", "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P04", "key_id": "did:key:z6MkNewOwnerKey", "alg": "EdDSA", "signed_hash": "sha256:a1b2c3d4e5f60718a1b2c3d4e5f60718a1b2c3d4e5f60718a1b2c3d4e5f60718", "signed_at": "2026-03-01T12:02:00Z", "role_at_signing": "receiving_owner" }
+      { "sig_id": "sig_03a", "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P01", "key_id": "did:key:z6Mkgfv76Qix9QTv6JA5bj8tW8MVbbPrjoAm24aYm29XASg1", "alg": "EdDSA", "signed_hash": "sha256:78b2135d3c93a5f592ace18e7b875de161680f403cbc9cce87ff63f91642b489", "signed_at": "2026-03-01T12:01:00Z", "role_at_signing": "transferring_owner", "signature": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa2dmdjc2UWl4OVFUdjZKQTViajh0VzhNVmJiUHJqb0FtMjRhWW0yOVhBU2cxIn0..vuUxpZ4GlvQbrwO9QvoUcw11K4IyQrXyRpbYVEwK9R9LCPlKLQULIKBalXdufxMyo2mCDEXLWgQd-KQj_zGaDg" },
+      { "sig_id": "sig_03b", "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P04", "key_id": "did:key:z6MkokCSMdqFhKi8xDQ8tYdLvBTKqiWrpb1a6TEHx5UQhQtb", "alg": "EdDSA", "signed_hash": "sha256:78b2135d3c93a5f592ace18e7b875de161680f403cbc9cce87ff63f91642b489", "signed_at": "2026-03-01T12:02:00Z", "role_at_signing": "receiving_owner", "signature": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa29rQ1NNZHFGaEtpOHhEUTh0WWRMdkJUS3FpV3JwYjFhNlRFSHg1VVFoUXRiIn0..CBzOUcSFmQ1S1bz_Rz7-qz9otoDbBvPVEA4EKX-vQ9DP9iLQ-rSM7rkNGefmfU0c7EXQ2D8uTR3p26YOtostDw" }
     ]
   },
   {
@@ -84,7 +84,7 @@
     },
     "held": false,
     "signatures": [
-      { "sig_id": "sig_04", "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P10", "key_id": "did:key:z6MkMaintainerKey", "alg": "EdDSA", "signed_hash": "sha256:a1b2c3d4e5f60718a1b2c3d4e5f60718a1b2c3d4e5f60718a1b2c3d4e5f60718", "signed_at": "2026-06-10T10:31:00Z", "role_at_signing": "maintainer" }
+      { "sig_id": "sig_04", "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P10", "key_id": "did:key:z6Mkqcf5WVxdSPzqQCaK6gNF7e6eTnpg92RzQLBG7dr9z5qu", "alg": "EdDSA", "signed_hash": "sha256:a14e086eeb53467c9181742a9ff88b94ee3da36982b5cb861862262b87d6b099", "signed_at": "2026-06-10T10:31:00Z", "role_at_signing": "maintainer", "signature": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa3FjZjVXVnhkU1B6cVFDYUs2Z05GN2U2ZVRucGc5MlJ6UUxCRzdkcjl6NXF1In0..AaEpIDMND5jCFbP33JDq97cdCIuN7_vWRAbYOQUTHedaxJhNgoi0SKBdfaSBURD7N5xP5IRjCSYd9SKW1sdIBw" }
     ]
   },
   {
@@ -114,8 +114,8 @@
     },
     "held": false,
     "signatures": [
-      { "sig_id": "sig_05a", "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P02", "key_id": "did:key:z6MkCrewKey", "alg": "EdDSA", "signed_hash": "sha256:a1b2c3d4e5f60718a1b2c3d4e5f60718a1b2c3d4e5f60718a1b2c3d4e5f60718", "signed_at": "2026-09-20T15:01:00Z", "role_at_signing": "crew" },
-      { "sig_id": "sig_05b", "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P04", "key_id": "did:key:z6MkNewOwnerKey", "alg": "EdDSA", "signed_hash": "sha256:a1b2c3d4e5f60718a1b2c3d4e5f60718a1b2c3d4e5f60718a1b2c3d4e5f60718", "signed_at": "2026-09-20T15:02:00Z", "role_at_signing": "operator" }
+      { "sig_id": "sig_05a", "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P02", "key_id": "did:key:z6Mkhwgn4KSSWGr4w93NQTaxdvvkk4i5L5DEvs4y4tDj4FA8", "alg": "EdDSA", "signed_hash": "sha256:1818e4555f389757e2abff13b32926cec3c3629441bfb39c803440212d72ce75", "signed_at": "2026-09-20T15:01:00Z", "role_at_signing": "crew", "signature": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa2h3Z240S1NTV0dyNHc5M05RVGF4ZHZ2a2s0aTVMNURFdnM0eTR0RGo0RkE4In0..ixYiiR3-CAA_YvY3m5iaZZ8bhJ-0u6vsRs2i2DEQQT_piqU11SUDmrabodQUGrpK4l97ZJ5Xz7Rzqm04JrFvAQ" },
+      { "sig_id": "sig_05b", "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P04", "key_id": "did:key:z6MkokCSMdqFhKi8xDQ8tYdLvBTKqiWrpb1a6TEHx5UQhQtb", "alg": "EdDSA", "signed_hash": "sha256:1818e4555f389757e2abff13b32926cec3c3629441bfb39c803440212d72ce75", "signed_at": "2026-09-20T15:02:00Z", "role_at_signing": "operator", "signature": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa29rQ1NNZHFGaEtpOHhEUTh0WWRMdkJUS3FpV3JwYjFhNlRFSHg1VVFoUXRiIn0..Rlgvb3U88boam-l6nitkzaQGzKTNywHaj5ZW0HnSmx9amn4lDZaYrsJXn7yH0YhNqkkH9FPe-KaZ0pE4D4K0AA" }
     ],
     "evidence": [
       { "evidence_id": "ev-photo-j3", "kind": "photo", "content_hash": "sha256:a1b2c3d4e5f60718a1b2c3d4e5f60718a1b2c3d4e5f60718a1b2c3d4e5f60718", "storage_ref": "cas://a1b2c3d4e5f60718", "captured_by": "pty_01JC8K2M4N6P8R0T2V4X6Z8P02", "redactions": ["faces"] }
@@ -139,8 +139,8 @@
     },
     "held": false,
     "signatures": [
-      { "sig_id": "sig_06a", "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P04", "key_id": "did:key:z6MkNewOwnerKey", "alg": "EdDSA", "signed_hash": "sha256:a1b2c3d4e5f60718a1b2c3d4e5f60718a1b2c3d4e5f60718a1b2c3d4e5f60718", "signed_at": "2026-09-20T16:01:00Z", "role_at_signing": "sender" },
-      { "sig_id": "sig_06b", "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P03", "key_id": "did:key:z6MkHubKey", "alg": "EdDSA", "signed_hash": "sha256:a1b2c3d4e5f60718a1b2c3d4e5f60718a1b2c3d4e5f60718a1b2c3d4e5f60718", "signed_at": "2026-09-20T16:02:00Z", "role_at_signing": "receiver" }
+      { "sig_id": "sig_06a", "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P04", "key_id": "did:key:z6MkokCSMdqFhKi8xDQ8tYdLvBTKqiWrpb1a6TEHx5UQhQtb", "alg": "EdDSA", "signed_hash": "sha256:d9b859d7b037bfb7c3f858e5b97421967972d59895fb99aacea4a432b376b46f", "signed_at": "2026-09-20T16:01:00Z", "role_at_signing": "sender", "signature": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa29rQ1NNZHFGaEtpOHhEUTh0WWRMdkJUS3FpV3JwYjFhNlRFSHg1VVFoUXRiIn0..sKhZTecjQY4V8nPmljM3YXGUahIgfb2QFflo4LLCs7K_M4gu3_s4FGCJH-7rhAsvbHaRQEmOybUd2JqnBqScDw" },
+      { "sig_id": "sig_06b", "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P03", "key_id": "did:key:z6Mkn7XK2aBCMTgPRLvYDYfYXsmi2Dssm2oBHcoYJVcZzLD3", "alg": "EdDSA", "signed_hash": "sha256:d9b859d7b037bfb7c3f858e5b97421967972d59895fb99aacea4a432b376b46f", "signed_at": "2026-09-20T16:02:00Z", "role_at_signing": "receiver", "signature": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa243WEsyYUJDTVRnUFJMdllEWWZZWHNtaTJEc3NtMm9CSGNvWUpWY1p6TEQzIn0..zGdcwoAZyfsfPN9tzBCcLqSgie9YEBb9EfDfHz7PmIBck3M_gZCQc7Js7RzHa-QZUou0vmZYnOJPBEBhGPXrBQ" }
     ]
   },
   {
@@ -155,7 +155,7 @@
     "payload": { "mass_kg": 218, "scale_id": "scale-hub1-a", "certification_id": "NTEP-2026-0042" },
     "held": false,
     "signatures": [
-      { "sig_id": "sig_07", "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P06", "key_id": "did:key:z6MkScaleKey", "alg": "EdDSA", "signed_hash": "sha256:a1b2c3d4e5f60718a1b2c3d4e5f60718a1b2c3d4e5f60718a1b2c3d4e5f60718", "signed_at": "2026-09-21T08:00:31Z", "role_at_signing": "scale" }
+      { "sig_id": "sig_07", "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P06", "key_id": "did:key:z6MksdvwwmoMKip64VTXTLrsMf6jpBCrKZ41GgCVdpFE2kuC", "alg": "EdDSA", "signed_hash": "sha256:0a2f7b11a3d5e40cb5e1cd3fc497703d9b3aec3351cf645e10a7a7d99455cc38", "signed_at": "2026-09-21T08:00:31Z", "role_at_signing": "scale", "signature": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa3Nkdnd3bW9NS2lwNjRWVFhUTHJzTWY2anBCQ3JLWjQxR2dDVmRwRkUya3VDIn0..5dJmPUardFOKZ8CXQhtrFKvXZX7IVG2KqRUzAHxzO9Ij8oS8z0HWbkZu2Hz3Jw-EqBjgWB2neKssabFFGyHPBA" }
     ]
   },
   {
@@ -182,7 +182,7 @@
     },
     "held": false,
     "signatures": [
-      { "sig_id": "sig_08", "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P05", "key_id": "did:key:z6MkFacilityKey", "alg": "EdDSA", "signed_hash": "sha256:a1b2c3d4e5f60718a1b2c3d4e5f60718a1b2c3d4e5f60718a1b2c3d4e5f60718", "signed_at": "2026-09-22T11:01:00Z", "role_at_signing": "facility" }
+      { "sig_id": "sig_08", "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P05", "key_id": "did:key:z6MkoJ9Y5aLKX8xUHSiU1qF17Dwb8VqvRAn5737M3CXuAUix", "alg": "EdDSA", "signed_hash": "sha256:e1413126e9376580750009440011bcd5d3704bc39d78146473b7f44698a7c4b3", "signed_at": "2026-09-22T11:01:00Z", "role_at_signing": "facility", "signature": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa29KOVk1YUxLWDh4VUhTaVUxcUYxN0R3YjhWcXZSQW41NzM3TTNDWHVBVWl4In0..Rxm_njPLjbntt3jXjv0CJB4XL2aEaNBpNkpfFjoLn7Z89mZAeh9R03Iqwf3sN7EZKMIYC1CBilBzLc678VteBQ" }
     ],
     "evidence": [
       { "evidence_id": "ev-photo-before", "kind": "photo", "content_hash": "sha256:a1b2c3d4e5f60718a1b2c3d4e5f60718a1b2c3d4e5f60718a1b2c3d4e5f60718", "storage_ref": "cas://b1b2c3d4e5f60718" },
@@ -201,7 +201,7 @@
     "payload": { "mass_kg": 66.9, "scale_id": "scale-hub1-a", "certification_id": "NTEP-2026-0042" },
     "held": false,
     "signatures": [
-      { "sig_id": "sig_09", "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P06", "key_id": "did:key:z6MkScaleKey", "alg": "EdDSA", "signed_hash": "sha256:a1b2c3d4e5f60718a1b2c3d4e5f60718a1b2c3d4e5f60718a1b2c3d4e5f60718", "signed_at": "2026-09-22T10:30:21Z", "role_at_signing": "scale" }
+      { "sig_id": "sig_09", "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P06", "key_id": "did:key:z6MksdvwwmoMKip64VTXTLrsMf6jpBCrKZ41GgCVdpFE2kuC", "alg": "EdDSA", "signed_hash": "sha256:c436592f8912e56ce493772d2c2a2948f95588a92b4cd960367457d7d3269cb3", "signed_at": "2026-09-22T10:30:21Z", "role_at_signing": "scale", "signature": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa3Nkdnd3bW9NS2lwNjRWVFhUTHJzTWY2anBCQ3JLWjQxR2dDVmRwRkUya3VDIn0..E-LtwJuZRlJUi9A3G5D9xuiiicXQwSTRBB2wZoKpMr5oepHqZMwLy_F-S4gMOVnWOnZYwpmyyVkzbbXzOY5hBw" }
     ]
   },
   {
@@ -216,8 +216,8 @@
     "payload": { "family": "recycle", "receiver_doc_refs": ["manifest-hub1-0925"] },
     "held": false,
     "signatures": [
-      { "sig_id": "sig_10a", "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P03", "key_id": "did:key:z6MkHubKey", "alg": "EdDSA", "signed_hash": "sha256:a1b2c3d4e5f60718a1b2c3d4e5f60718a1b2c3d4e5f60718a1b2c3d4e5f60718", "signed_at": "2026-09-25T10:11:00Z", "role_at_signing": "receiver" },
-      { "sig_id": "sig_10b", "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P04", "key_id": "did:key:z6MkNewOwnerKey", "alg": "EdDSA", "signed_hash": "sha256:a1b2c3d4e5f60718a1b2c3d4e5f60718a1b2c3d4e5f60718a1b2c3d4e5f60718", "signed_at": "2026-09-25T10:12:00Z", "role_at_signing": "operator" }
+      { "sig_id": "sig_10a", "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P03", "key_id": "did:key:z6Mkn7XK2aBCMTgPRLvYDYfYXsmi2Dssm2oBHcoYJVcZzLD3", "alg": "EdDSA", "signed_hash": "sha256:b8d8fc6cf449a6cbb5f210652a006f2a8f5025806bcac888f3076b558bba2f37", "signed_at": "2026-09-25T10:11:00Z", "role_at_signing": "receiver", "signature": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa243WEsyYUJDTVRnUFJMdllEWWZZWHNtaTJEc3NtMm9CSGNvWUpWY1p6TEQzIn0..P6SSlD4jTAid86mot6X-kxfC7xa0Id6LxytdCI0rYwt0tFxW9jidil6iPLhR_nIphnITKm1x2zp4SopmVhbOCg" },
+      { "sig_id": "sig_10b", "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P04", "key_id": "did:key:z6MkokCSMdqFhKi8xDQ8tYdLvBTKqiWrpb1a6TEHx5UQhQtb", "alg": "EdDSA", "signed_hash": "sha256:b8d8fc6cf449a6cbb5f210652a006f2a8f5025806bcac888f3076b558bba2f37", "signed_at": "2026-09-25T10:12:00Z", "role_at_signing": "operator", "signature": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa29rQ1NNZHFGaEtpOHhEUTh0WWRMdkJUS3FpV3JwYjFhNlRFSHg1VVFoUXRiIn0..NTanf40nR_sYKC-lkpOErD19VkprKNmdUuJ-X43DiQnCrAvdlyNH8mtWkDVxQ1dvWwtMCt7YaENBxJyUnbtpBw" }
     ]
   }
 ]

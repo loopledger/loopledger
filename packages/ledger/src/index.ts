@@ -3,10 +3,10 @@
 import { EVENT_TYPES, requiredSigners } from "@loopledger/spec";
 import type { EventType } from "@loopledger/spec";
 import type { EventRow, EventStore, EvidenceStore, KeyResolver, SignatureRow } from "@loopledger/ports";
-import { VERIFIERS, eventHash, eventRow, sha256, signingInput } from "./crypto";
+import { VERIFIERS, detachedSignature, eventHash, eventRow, jwsSigningInput, sha256 } from "./crypto";
 import type { Verifier } from "./crypto";
 
-export { canonical, eventHash, merkleRoot, sha256, signingInput } from "./crypto";
+export { canonical, detachedSignature, eventHash, jwsHeader, jwsSigningInput, merkleRoot, sha256, signEvent, signingPayload } from "./crypto";
 
 export type EventInput = EventRow & { signatures?: SignatureRow[] };
 
@@ -139,6 +139,12 @@ export class Ledger {
     if (row.signed_hash !== eventHash(event)) refuse("signed_hash does not match the event");
     const verifier = Object.hasOwn(this.verifiers, row.alg) ? this.verifiers[row.alg] : undefined;
     if (!verifier) refuse(`unknown alg ${String(row.alg)}`);
+    let value: Buffer = Buffer.alloc(0);
+    try {
+      value = detachedSignature(row);
+    } catch (error) {
+      refuse((error as Error).message);
+    }
     const key = await this.keys.resolve(row.key_id);
     if (!key) refuse(`unknown key ${row.key_id}`);
     else {
@@ -150,7 +156,7 @@ export class Ledger {
       }
       let ok = false;
       try {
-        ok = verifier!(key.public_key, signingInput(row), row.signature);
+        ok = verifier!(key.public_key, jwsSigningInput(event, row), value);
       } catch {
         ok = false;
       }

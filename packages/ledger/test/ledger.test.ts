@@ -1,8 +1,8 @@
-import { createHash, createPrivateKey, createPublicKey, sign } from "node:crypto";
+import { createHash, createPrivateKey, createPublicKey } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { MemoryEventStore, MemoryEvidenceStore, MemoryKeyResolver } from "@loopledger/adapter-memory";
 import type { EventRow, EvidenceStore, SignatureRow } from "@loopledger/ports";
-import { Ledger, eventHash, merkleRoot, signingInput } from "../src/index";
+import { Ledger, canonical, eventHash, jwsHeader, merkleRoot, signEvent } from "../src/index";
 import type { EventInput } from "../src/index";
 
 const TENANT = "acme-hospitality";
@@ -25,7 +25,7 @@ const owners: Record<keyof typeof keys, number> = { sender: 1, receiver: 2, scal
 const setup = () => {
   const resolver = new MemoryKeyResolver();
   for (const [name, k] of Object.entries(keys)) {
-    resolver.register({ key_id: `key-${name}`, party_id: party(owners[name as keyof typeof keys]), alg: "Ed25519", public_key: k.public_key, valid_from: "2026-01-01T00:00:00Z", valid_until: "2027-01-01T00:00:00Z" });
+    resolver.register({ key_id: `key-${name}`, party_id: party(owners[name as keyof typeof keys]), alg: "EdDSA", public_key: k.public_key, valid_from: "2026-01-01T00:00:00Z", valid_until: "2027-01-01T00:00:00Z" });
   }
   const events = new MemoryEventStore();
   const evidence = new MemoryEvidenceStore();
@@ -44,17 +44,17 @@ const base = (n: number, type: string, extra: Partial<EventRow> = {}): EventRow 
 });
 
 let sigCount = 0;
-const sig = (event: EventRow, name: keyof typeof keys, role: string, over: Partial<SignatureRow> = {}): SignatureRow => {
-  const body = { signed_hash: eventHash(event), party_id: party(owners[name]), role_at_signing: role, signed_at: "2026-02-02T08:00:10Z", ...over };
-  return {
+const sig = (event: EventRow, name: keyof typeof keys, role: string, over: Partial<SignatureRow> = {}): SignatureRow => ({
+  ...signEvent(event, keys[name].privateKey, {
     sig_id: `sig_${++sigCount}`,
     key_id: `key-${name}`,
-    alg: "Ed25519",
-    ...body,
-    signature: sign(null, signingInput(body), keys[name].privateKey).toString("base64"),
+    party_id: party(owners[name]),
+    role_at_signing: role,
+    signed_at: "2026-02-02T08:00:10Z",
     ...over,
-  };
-};
+  }),
+  ...over,
+});
 
 const custody = (n = 1): EventRow => base(n, "custody_transferred");
 const weighed = (n = 2): EventRow => base(n, "weighed");
@@ -174,7 +174,8 @@ describe("REQ-LEDGER-002 an event with too few signatures is held and never fina
   it("refuses a signature that is invalid, signed over another event, or made outside its key's validity window", async () => {
     const { ledger } = setup();
     const event = custody();
-    const forged = { ...sig(event, "sender", "sender"), signature: sig(event, "other", "sender").signature };
+    const own = sig(event, "sender", "sender");
+    const forged = { ...own, signature: `${own.signature.split(".")[0]}..${sig(event, "other", "sender").signature.split(".")[2]}` };
     await expect(ledger.append({ ...event, signatures: [forged] })).rejects.toThrow(/does not verify/);
     const elsewhere = sig(weighed(), "sender", "sender");
     await expect(ledger.append({ ...event, signatures: [elsewhere] })).rejects.toThrow(/does not match the event/);
@@ -220,13 +221,12 @@ describe("REQ-LEDGER-003 evidence is stored by hash and checked on read", () => 
 });
 
 describe("REQ-LEDGER-004 every signature carries alg and verification dispatches on it", () => {
-  it("accepts Ed25519 and EdDSA and refuses an unknown or missing alg", async () => {
-    const { ledger, resolver } = setup();
+  it("accepts EdDSA and refuses the legacy Ed25519 string, an unknown alg or a missing one", async () => {
+    const { ledger } = setup();
     const event = weighed();
     expect((await ledger.append({ ...event, signatures: [sig(event, "scale", "scale")] })).held).toBe(false);
-    resolver.register({ key_id: "key-eddsa", party_id: party(3), alg: "EdDSA", public_key: keys.scale.public_key, valid_from: "2026-01-01T00:00:00Z" });
-    const second = weighed(6);
-    expect((await ledger.append({ ...second, signatures: [sig(second, "scale", "scale", { key_id: "key-eddsa", alg: "EdDSA" })] })).held).toBe(false);
+    const legacy = weighed(6);
+    await expect(ledger.append({ ...legacy, signatures: [sig(legacy, "scale", "scale", { alg: "Ed25519" })] })).rejects.toThrow(/unknown alg/);
     const third = weighed(7);
     await expect(ledger.append({ ...third, signatures: [sig(third, "scale", "scale", { alg: "ML-DSA-65" })] })).rejects.toThrow(/unknown alg/);
     await expect(ledger.append({ ...third, signatures: [sig(third, "scale", "scale", { alg: "toString" })] })).rejects.toThrow(/unknown alg/);
@@ -234,9 +234,76 @@ describe("REQ-LEDGER-004 every signature carries alg and verification dispatches
   });
 
   it("refuses a signature whose alg differs from its key's", async () => {
+    const { ledger, resolver } = setup();
+    resolver.register({ key_id: "key-other-suite", party_id: party(3), alg: "ML-DSA-65", public_key: keys.scale.public_key, valid_from: "2026-01-01T00:00:00Z" });
+    const event = weighed();
+    await expect(ledger.append({ ...event, signatures: [sig(event, "scale", "scale", { key_id: "key-other-suite" })] })).rejects.toThrow(/is not an EdDSA key/);
+  });
+});
+
+describe("REQ-LEDGER-007 the ledger signs and verifies a detached JWS", () => {
+  const detach = (row: SignatureRow, header: string, middle = "") => `${header}.${middle}.${row.signature.split(".")[2]}`;
+
+  it("signs a detached JWS whose header is the JCS of alg and kid, and verifies it", async () => {
     const { ledger } = setup();
     const event = weighed();
-    await expect(ledger.append({ ...event, signatures: [sig(event, "scale", "scale", { alg: "EdDSA" })] })).rejects.toThrow(/is not an EdDSA key/);
+    const row = sig(event, "scale", "scale");
+    const [header, payload, value] = row.signature.split(".");
+    expect(payload).toBe("");
+    expect(value).toMatch(/^[A-Za-z0-9_-]{86}$/);
+    expect(Buffer.from(header!, "base64url").toString()).toBe(`{"alg":"EdDSA","kid":"key-scale"}`);
+    expect((await ledger.append({ ...event, signatures: [row] })).held).toBe(false);
+  });
+
+  it("refuses a signature that is tampered with: the event, the role, the time or the signature value", async () => {
+    const { ledger } = setup();
+    const event = weighed();
+    const good = sig(event, "scale", "scale");
+    const at = good.signature.length - 10;
+    const flipped = good.signature.slice(0, at) + (good.signature[at] === "A" ? "B" : "A") + good.signature.slice(at + 1);
+    await expect(ledger.append({ ...event, signatures: [{ ...good, signature: flipped }] })).rejects.toThrow(/does not verify/);
+    await expect(ledger.append({ ...event, signatures: [{ ...good, signed_at: "2026-02-03T08:00:10Z" }] })).rejects.toThrow(/does not verify/);
+    await expect(ledger.append({ ...event, payload: { note: "other" }, signatures: [good] })).rejects.toThrow(/does not match the event/);
+    expect((await ledger.append({ ...event, signatures: [good] })).held).toBe(false);
+  });
+
+  it("refuses a header whose alg or kid differs from the row's alg and key_id", async () => {
+    const { ledger } = setup();
+    const event = weighed();
+    const good = sig(event, "scale", "scale");
+    await expect(ledger.append({ ...event, signatures: [{ ...good, key_id: "key-other" }] })).rejects.toThrow(/JWS header does not match/);
+    await expect(ledger.append({ ...event, signatures: [{ ...good, signature: detach(good, jwsHeader("ML-DSA-65", "key-scale")) }] })).rejects.toThrow(/JWS header does not match/);
+    await expect(ledger.append({ ...event, signatures: [{ ...good, signature: detach(good, Buffer.from(`{"kid":"key-scale","alg":"EdDSA"}`).toString("base64url")) }] })).rejects.toThrow(/JWS header does not match/);
+  });
+
+  it("refuses a JWS that is not detached, and a signature that is not a JWS", async () => {
+    const { ledger } = setup();
+    const event = weighed();
+    const good = sig(event, "scale", "scale");
+    const header = good.signature.split(".")[0]!;
+    for (const signature of [detach(good, header, "e30"), `${header}.${good.signature.split(".")[2]}`, "", "not a jws", Buffer.from("raw").toString("base64")]) {
+      await expect(ledger.append({ ...event, signatures: [{ ...good, signature }] })).rejects.toThrow(/detached JWS/);
+    }
+    await expect(ledger.append({ ...event, signatures: [{ ...good, signature: undefined as never }] })).rejects.toThrow(/detached JWS/);
+  });
+});
+
+describe("REQ-LEDGER-005 and REQ-LEDGER-007 canonical form is RFC 8785 JCS", () => {
+  it("serialises the RFC 8785 §3.2.4 example", () => {
+    const value = { numbers: [333333333.33333329, 1e30, 4.5, 2e-3, 1e-27], string: "€$\u000f\nA'B\"\\\\\"/", literals: [null, true, false] };
+    expect(canonical(value)).toBe(String.raw`{"literals":[null,true,false],"numbers":[333333333.3333333,1e+30,4.5,0.002,1e-27],"string":"€$\u000f\nA'B\"\\\\\"/"}`);
+  });
+
+  it("sorts members by UTF-16 code units (RFC 8785 §3.2.3) and drops undefined members", () => {
+    const order = ["\r", "1", "\u0080", "ö", "€", "\u{1f600}", "דּ"];
+    const value = Object.fromEntries(order.map((k, i) => [k, i]).reverse());
+    expect(canonical({ ...value, dropped: undefined })).toBe(`{${order.map((k, i) => `${JSON.stringify(k)}:${i}`).join(",")}}`);
+  });
+
+  it("serialises numbers as ECMAScript does and refuses one with no JSON form", () => {
+    expect(canonical([0, -0, 1e21, 1e-7, 123456789012345680000, 0.1])).toBe("[0,0,1e+21,1e-7,123456789012345680000,0.1]");
+    expect(() => canonical({ n: Number.NaN })).toThrow(/non-finite/);
+    expect(() => canonical([Number.POSITIVE_INFINITY])).toThrow(/non-finite/);
   });
 });
 
