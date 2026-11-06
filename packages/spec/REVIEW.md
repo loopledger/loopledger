@@ -19,6 +19,7 @@ A review takes one to two hours.
 - Does composition reconcile with weighed fractions, using a mass basis and the same material vocabulary?
 - Can an owner who never joins the network resolve a passport and append to it?
 - Do the vocabularies map to existing classifications rather than inventing parallel ones?
+- Is the core vocabulary (routes, joint types, materials, causes) sufficient, with the standards as mappings and classifications beside it rather than inside it?
 
 For a reviewer from a particular area, these questions matter most:
 

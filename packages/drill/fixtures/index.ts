@@ -133,15 +133,18 @@ export const buildFixture = (): Fixture => {
       if (w !== f.weighed_event) throw new Error("the weighed event id moved");
     });
     // One line per fraction (REQ-EVENT-016). A separated fraction is recycled (G4) or kept in use (G5); G4's bonded
-    // upholstery was never separated, so it goes to energy recovery and the record claims no vinyl was recycled.
+    // upholstery was never separated, so it goes to recovery and the record claims no vinyl was recycled. The EU codes
+    // ride beside each route as classifications (REQ-EVENT-020).
+    const eu = (code: string) => [{ scheme: "eu-wfd-2008-98", code }];
     const lines = fractions.map((f) => ({
       material: f.material,
       mass_kg: f.mass_kg,
-      rd_code: item.label === "G4" ? (f.material.endsWith("/steel") ? "R4" : "R3") : "R12",
+      route: item.label === "G4" ? "recycle" : "redeploy",
+      classification: eu(item.label === "G4" ? (f.material.endsWith("/steel") ? "R4" : "R3") : "R12"),
       facility_party_id: party("receiver"),
       end_of_waste: item.label === "G4",
     }));
-    if (!upholsterySeparated) lines.push({ material: `${MATERIAL}vinyl`, mass_kg: kg(38.8), rd_code: "R1", facility_party_id: party("receiver"), end_of_waste: false });
+    if (!upholsterySeparated) lines.push({ material: `${MATERIAL}vinyl`, mass_kg: kg(38.8), route: "recovery", classification: eu("R1"), facility_party_id: party("receiver"), end_of_waste: false });
     emit("disposition_final", asset, at(done, 120), { family: item.label === "G4" ? "recycle" : "redeploy", lines }, ["receiver", "operator"]);
   };
 

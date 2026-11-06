@@ -298,26 +298,41 @@ describe("REQ-DRILL-010 the drill fixtures use per-fraction dispositions", () =>
     const ids = new Set(fixture.assets.filter((a) => a.revision === label).map((a) => a.asset_id));
     return events.filter((e) => e.event_type === "disposition_final" && ids.has(e.asset_ids[0]!));
   };
-  type Line = { material: string; mass_kg: number; rd_code: string; facility_party_id: string; end_of_waste: boolean };
+  type Line = { material: string; mass_kg: number; route: string; classification: { scheme: string; code: string }[]; facility_party_id: string; end_of_waste: boolean };
   const lines = (e: EventRow) => e.payload["lines"] as Line[];
+  const codes = (l: Line) => l.classification.map((c) => `${c.scheme}:${c.code}`);
 
-  it("gives every disposition one line per fraction with a code, a facility and a mass", () => {
+  it("gives every disposition one line per fraction with a route, a facility and a mass", () => {
     for (const e of [...finals("G4"), ...finals("G5")]) {
       expect(lines(e).length).toBeGreaterThanOrEqual(3);
-      for (const l of lines(e)) expect(l).toMatchObject({ material: expect.stringContaining("/vocab/material/"), rd_code: expect.stringMatching(/^R\d+$/), facility_party_id: expect.stringMatching(/^pty_/) });
+      for (const l of lines(e)) expect(l).toMatchObject({ material: expect.stringContaining("/vocab/material/"), route: expect.stringMatching(/^[a-z]+$/), facility_party_id: expect.stringMatching(/^pty_/) });
     }
   });
 
-  it("sends G4's never-separated bonded vinyl to energy recovery, not recycling", () => {
+  it("carries the EU codes as eu-wfd-2008-98 classifications beside the route", () => {
+    for (const e of [...finals("G4"), ...finals("G5")]) {
+      for (const l of lines(e)) {
+        expect(l.classification).toHaveLength(1);
+        expect(l.classification[0]).toMatchObject({ scheme: "eu-wfd-2008-98", code: expect.stringMatching(/^R\d+$/) });
+      }
+    }
+  });
+
+  it("sends G4's never-separated bonded vinyl to recovery, not recycling", () => {
     expect(finals("G4")).toHaveLength(14);
     for (const e of finals("G4")) {
-      expect(lines(e).find((l) => l.material.endsWith("/vinyl"))).toMatchObject({ rd_code: "R1", end_of_waste: false });
-      expect(lines(e).filter((l) => l.rd_code !== "R1").map((l) => l.material.split("/").pop())).toEqual(["steel", "plywood"]);
+      const vinyl = lines(e).find((l) => l.material.endsWith("/vinyl"))!;
+      expect(vinyl).toMatchObject({ route: "recovery", end_of_waste: false });
+      expect(codes(vinyl)).toEqual(["eu-wfd-2008-98:R1"]);
+      expect(lines(e).filter((l) => l.route !== "recovery").map((l) => l.material.split("/").pop())).toEqual(["steel", "plywood"]);
     }
   });
 
   it("keeps G5's separated fractions in reuse", () => {
     expect(finals("G5")).toHaveLength(12);
-    for (const e of finals("G5")) expect(lines(e).map((l) => l.rd_code)).toEqual(["R12", "R12", "R12"]);
+    for (const e of finals("G5")) {
+      expect(lines(e).map((l) => l.route)).toEqual(["redeploy", "redeploy", "redeploy"]);
+      expect(lines(e).map(codes)).toEqual([["eu-wfd-2008-98:R12"], ["eu-wfd-2008-98:R12"], ["eu-wfd-2008-98:R12"]]);
+    }
   });
 });

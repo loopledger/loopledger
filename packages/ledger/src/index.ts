@@ -1,6 +1,6 @@
 // The ledger: an append-only event log with two-party signatures and evidence stored by hash (issue #7).
 // Events are never updated. A countersignature is a new signature row, and `held` is derived from the rows.
-import { EVENT_TYPES, dispositionFamilyErrors, dispositionSeparationErrors, requiredSigners, signerBindingErrors } from "@loopledger/spec";
+import { EVENT_TYPES, dispositionClassificationErrors, dispositionFamilyErrors, dispositionSeparationErrors, requiredSigners, signerBindingErrors } from "@loopledger/spec";
 import type { EventType } from "@loopledger/spec";
 import type { EventRow, EventStore, EvidenceStore, KeyResolver, SignatureRow } from "@loopledger/ports";
 import { VERIFIERS, detachedSignature, eventHash, eventRow, jwsSigningInput, sha256 } from "./crypto";
@@ -134,8 +134,9 @@ export class Ledger {
   }
 
   /**
-   * Refuses a `disposition_final` whose `family` is not the route of its heaviest line, or that sends a fraction to
-   * reuse or recycling that no `processed` event on the asset (or the one that birthed it) separated.
+   * Refuses a `disposition_final` whose `family` is not the route of its heaviest line, whose known-scheme
+   * classification contradicts a line's `route`, or that sends a fraction to redeploy, resale, donation or recycling
+   * that no `processed` event on the asset (or the one that birthed it) separated.
    */
   private async disposition(event: EventRow): Promise<void> {
     const processed = (await this.events.readAll())
@@ -145,7 +146,11 @@ export class Ledger {
         return event.asset_ids.some((a) => e.asset_ids.includes(a) || children.includes(a));
       })
       .map((e) => e.payload);
-    const errors = [...dispositionFamilyErrors(event.payload), ...dispositionSeparationErrors(event.payload, processed)];
+    const errors = [
+      ...dispositionFamilyErrors(event.payload),
+      ...dispositionClassificationErrors(event.payload),
+      ...dispositionSeparationErrors(event.payload, processed),
+    ];
     if (errors.length > 0) refuse(errors.join("; "));
   }
 

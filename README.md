@@ -28,7 +28,7 @@ Phase 0, under review. The passport and event schemas (v0.1, JSON-LD) and the jo
 
 ## Standards
 
-LoopLedger builds on existing open standards rather than inventing rival formats: GS1 EPCIS 2.0 and CBV 2.0 for events, the UNTP Digital Product Passport and EU DPP (ESPR) for passports, ISO/IEC 15459 identifiers carried as GS1 Digital Link, IFC and bSDD for design data, EN 15804 EPDs for carbon, and ISO 20887 for design for disassembly.
+The core records LoopLedger's own terms: event types, disposition routes, joint types, materials and causes. Standards sit around it as adapters and classifications, so the core does not depend on any one region's codes. The adapters cover EPCIS 2.0 and CBV 2.0 / UNTP interchange, EU DPP (ESPR) export, IFC and bSDD mappings for design data, and ISO/IEC 15459 identifiers carried as GS1 Digital Link. Regional waste codes, such as the EU Waste Framework Directive R/D codes, ride on a disposition line as classifications beside its route. EN 15804 EPDs and ISO 20887 (design for disassembly) are the references for carbon and design.
 
 ## Contributing and license
 

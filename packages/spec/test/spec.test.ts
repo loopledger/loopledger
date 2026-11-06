@@ -6,7 +6,7 @@ import Ajv2020 from "ajv/dist/2020.js";
 import addFormats from "ajv-formats";
 import jsonld from "jsonld";
 import { describe, expect, it } from "vitest";
-import { BIO_BASED_MATERIALS, EVENT_TYPES, REQUIRED_SIGNERS, catalogErrors, dispositionFamilyErrors, dispositionSeparationErrors, isBioBased, requiredSigners, routeGroup, signerBindingErrors, validateEventSet } from "../src/index";
+import { BIO_BASED_MATERIALS, EVENT_TYPES, REQUIRED_SIGNERS, catalogErrors, dispositionClassificationErrors, dispositionFamilyErrors, dispositionSeparationErrors, isBioBased, requiredSigners,signerBindingErrors, validateEventSet } from "../src/index";
 import type { EventType } from "../src/index";
 
 type Json = any;
@@ -712,14 +712,22 @@ describe("REQ-EVENT-015 the two signers of a two-party event are distinct partie
 
 const PLYWOOD = "https://loopledger.org/vocab/material/plywood";
 const FACILITY = "pty_01JC8K2M4N6P8R0T2V4X6Z8P03";
-const line = (rd_code: string, material = PLYWOOD, mass_kg = 66.9): Json => ({ material, mass_kg, rd_code, facility_party_id: FACILITY, end_of_waste: false });
+const line = (route: string, material = PLYWOOD, mass_kg = 66.9, classification?: Json[]): Json => ({
+  material,
+  mass_kg,
+  route,
+  ...(classification ? { classification } : {}),
+  facility_party_id: FACILITY,
+  end_of_waste: false,
+});
+const eu = (code: string): Json => ({ scheme: "eu-wfd-2008-98", code });
 
-describe("REQ-EVENT-005 a line with a D code needs a linked exception and a cause", () => {
+describe("REQ-EVENT-005 a line with a disposal route needs a linked exception and a cause", () => {
   const disposal = (): Json => {
     const doc = event("disposition_final");
     doc.payload = {
       family: "disposal",
-      lines: [line("D5")],
+      lines: [line("disposal")],
       exception_event_id: "evt_01JC8K2M4N6P8R0T2V4X6Z8B91",
       cause: { term: "https://loopledger.org/vocab/cause/no_receiver", design_addressable: false },
     };
@@ -748,9 +756,9 @@ describe("REQ-EVENT-005 a line with a D code needs a linked exception and a caus
     expect(eventOk(request)).toBe(true);
   });
 
-  it("requires them for any D line, even when the family is a recovery route", () => {
+  it("requires them for any disposal line, even when the family is another route", () => {
     const doc = event("disposition_final");
-    doc.payload.lines.push(line("D10", "https://loopledger.org/vocab/material/vinyl", 10));
+    doc.payload.lines.push(line("disposal", "https://loopledger.org/vocab/material/vinyl", 10));
     expect(eventOk(doc)).toBe(false);
     doc.payload.exception_event_id = "evt_01JC8K2M4N6P8R0T2V4X6Z8B91";
     doc.payload.cause = { term: "https://loopledger.org/vocab/cause/no_receiver", design_addressable: false };
@@ -759,10 +767,10 @@ describe("REQ-EVENT-005 a line with a D code needs a linked exception and a caus
 });
 
 describe("REQ-EVENT-016 a disposition carries per-fraction lines", () => {
-  it("accepts the example, whose line has material, mass, R/D code, facility and end-of-waste flag", () => {
+  it("accepts the example, whose line has material, mass, route, classification, facility and end-of-waste flag", () => {
     const doc = event("disposition_final");
     expect(eventOk(doc)).toBe(true);
-    expect(Object.keys(doc.payload.lines[0]).sort()).toEqual(["end_of_waste", "facility_party_id", "mass_kg", "material", "rd_code"]);
+    expect(Object.keys(doc.payload.lines[0]).sort()).toEqual(["classification", "end_of_waste", "facility_party_id", "mass_kg", "material", "route"]);
     expect(dispositionFamilyErrors(doc.payload)).toEqual([]);
   });
 
@@ -773,24 +781,29 @@ describe("REQ-EVENT-016 a disposition carries per-fraction lines", () => {
     const empty = event("disposition_final");
     empty.payload.lines = [];
     expect(eventOk(empty)).toBe(false);
-    for (const field of ["material", "mass_kg", "rd_code", "facility_party_id", "end_of_waste"]) {
+    for (const field of ["material", "mass_kg", "route", "facility_party_id", "end_of_waste"]) {
       const doc = event("disposition_final");
       delete doc.payload.lines[0][field];
       expect(eventOk(doc), field).toBe(false);
     }
   });
 
-  it("accepts R1 to R13 and D1 to D15 and rejects any other code", () => {
-    const ok = (code: string): boolean => {
+  it("accepts each of the six routes and rejects any other, including an EU code", () => {
+    const ok = (route: string): boolean => {
       const doc = event("disposition_final");
-      doc.payload.lines = [line(code)];
+      doc.payload.lines = [line(route)];
       doc.payload.exception_event_id = "evt_01JC8K2M4N6P8R0T2V4X6Z8B91";
       doc.payload.cause = { term: "https://loopledger.org/vocab/cause/no_receiver", design_addressable: false };
       return eventOk(doc);
     };
-    for (let n = 1; n <= 13; n++) expect(ok(`R${n}`), `R${n}`).toBe(true);
-    for (let n = 1; n <= 15; n++) expect(ok(`D${n}`), `D${n}`).toBe(true);
-    for (const code of ["R0", "R14", "D0", "D16", "R01", "r3", "R3 ", "X1", ""]) expect(ok(code), code).toBe(false);
+    for (const route of ["redeploy", "resale", "donate", "recycle", "recovery", "disposal"]) expect(ok(route), route).toBe(true);
+    for (const route of ["reuse", "R3", "D10", "Recycle", ""]) expect(ok(route), route).toBe(false);
+  });
+
+  it("has no rd_code field any more", () => {
+    const doc = event("disposition_final");
+    doc.payload.lines[0].rd_code = "R3";
+    expect(eventOk(doc)).toBe(false);
   });
 
   it("rejects a line without a facility party, with a negative mass or an unknown field", () => {
@@ -801,32 +814,81 @@ describe("REQ-EVENT-016 a disposition carries per-fraction lines", () => {
     }
   });
 
-  it("names energy recovery as its own family and derives each line's route from its code", () => {
-    expect(routeGroup("R1")).toBe("recovery");
-    expect(routeGroup("R4")).toBe("recycle");
-    expect(routeGroup("R12")).toBe("reuse");
-    expect(routeGroup("D10")).toBe("disposal");
+  it("names recovery as its own family and compares each line's route directly", () => {
     const doc = event("disposition_final");
     doc.payload.family = "recovery";
-    doc.payload.lines = [line("R1")];
+    doc.payload.lines = [line("recovery")];
     expect(eventOk(doc)).toBe(true);
     expect(dispositionFamilyErrors(doc.payload)).toEqual([]);
   });
 
   it("rejects a family that is not the route of the heaviest line", () => {
-    const payload = { family: "disposal", lines: [line("R3", PLYWOOD, 60), line("R1", "https://loopledger.org/vocab/material/vinyl", 6)] };
+    const payload = { family: "disposal", lines: [line("recycle", PLYWOOD, 60), line("recovery", "https://loopledger.org/vocab/material/vinyl", 6)] };
     expect(dispositionFamilyErrors(payload)).toHaveLength(1);
     expect(dispositionFamilyErrors({ ...payload, family: "recycle" })).toEqual([]);
     expect(dispositionFamilyErrors({ ...payload, family: "redeploy" })).toHaveLength(1);
     // a tie accepts either route
-    const tie = { lines: [line("R3", PLYWOOD, 5), line("R1", "https://loopledger.org/vocab/material/vinyl", 5)] };
+    const tie = { lines: [line("recycle", PLYWOOD, 5), line("recovery", "https://loopledger.org/vocab/material/vinyl", 5)] };
     expect(dispositionFamilyErrors({ ...tie, family: "recovery" })).toEqual([]);
     expect(dispositionFamilyErrors({ ...tie, family: "recycle" })).toEqual([]);
     expect(dispositionFamilyErrors({ ...tie, family: "disposal" })).toHaveLength(1);
   });
 });
 
-describe("REQ-EVENT-017 a reuse or recycle line for a fraction never separated is rejected", () => {
+describe("REQ-EVENT-020 a line's classification is a scheme and code, checked only for a known scheme", () => {
+  const withClass = (route: string, ...classification: Json[]): Json => {
+    const doc = event("disposition_final");
+    doc.payload.family = route;
+    doc.payload.lines = [line(route, PLYWOOD, 66.9, classification)];
+    doc.payload.exception_event_id = "evt_01JC8K2M4N6P8R0T2V4X6Z8B91";
+    doc.payload.cause = { term: "https://loopledger.org/vocab/cause/no_receiver", design_addressable: false };
+    return doc;
+  };
+
+  it("accepts a line with no classification, and several, even under one scheme", () => {
+    const doc = event("disposition_final");
+    delete doc.payload.lines[0].classification;
+    expect(eventOk(doc)).toBe(true);
+    expect(eventOk(withClass("recycle", eu("R3"), eu("R4"), { scheme: "ewc", code: "17 02 01" }))).toBe(true);
+  });
+
+  it("pattern-checks the eu-wfd-2008-98 code: R1 to R13 and D1 to D15 only", () => {
+    for (let n = 1; n <= 13; n++) expect(eventOk(withClass("recycle", eu(`R${n}`))), `R${n}`).toBe(true);
+    for (let n = 1; n <= 15; n++) expect(eventOk(withClass("disposal", eu(`D${n}`))), `D${n}`).toBe(true);
+    for (const code of ["R0", "R14", "D0", "D16", "R01", "r3", "R3 ", "X1", ""]) expect(eventOk(withClass("recycle", eu(code))), code).toBe(false);
+  });
+
+  it("does not pattern-check a code under an unknown scheme", () => {
+    expect(eventOk(withClass("recycle", { scheme: "us-epa-rcra", code: "anything at all" }))).toBe(true);
+    expect(eventOk(withClass("recycle", { scheme: "us-epa-rcra", code: "" }))).toBe(false);
+  });
+
+  it("requires a lowercase slug scheme and rejects an unknown field", () => {
+    for (const scheme of ["EU", "1eu", "eu_wfd", "eu wfd", ""]) expect(eventOk(withClass("recycle", { scheme, code: "R3" })), scheme).toBe(false);
+    expect(eventOk(withClass("recycle", { scheme: "ewc", code: "x", extra: 1 }))).toBe(false);
+    expect(eventOk(withClass("recycle", { scheme: "ewc" }))).toBe(false);
+  });
+
+  it("rejects a known scheme's code that contradicts the route", () => {
+    const errors = (route: string, code: string): string[] => dispositionClassificationErrors({ lines: [line(route, PLYWOOD, 1, [eu(code)])] });
+    expect(errors("recovery", "R1")).toEqual([]);
+    expect(errors("disposal", "D10")).toEqual([]);
+    for (const route of ["redeploy", "resale", "donate", "recycle"]) {
+      for (let n = 2; n <= 13; n++) expect(errors(route, `R${n}`), `${route} R${n}`).toEqual([]);
+      expect(errors(route, "R1"), `${route} R1`).toHaveLength(1);
+      expect(errors(route, "D1"), `${route} D1`).toHaveLength(1);
+    }
+    for (const route of ["recovery", "disposal"]) expect(errors(route, "R3"), `${route} R3`).toHaveLength(1);
+    expect(errors("recovery", "D5")).toHaveLength(1);
+    expect(errors("disposal", "R1")).toHaveLength(1);
+  });
+
+  it("does not read a code under an unknown scheme against the route", () => {
+    expect(dispositionClassificationErrors({ lines: [line("recycle", PLYWOOD, 1, [{ scheme: "ewc", code: "D10" }])] })).toEqual([]);
+  });
+});
+
+describe("REQ-EVENT-017 a redeploy, resale, donate or recycle line for a fraction never separated is rejected", () => {
   const VINYL = "https://loopledger.org/vocab/material/vinyl";
   const processed = events.find((e) => e.event_type === "processed" && e.payload.operation === "separate")!;
 
@@ -837,18 +899,19 @@ describe("REQ-EVENT-017 a reuse or recycle line for a fraction never separated i
   });
 
   it("rejects a recycle or reuse line for a material no processed event names", () => {
-    expect(dispositionSeparationErrors({ lines: [line("R3", VINYL)] }, [processed.payload])).toHaveLength(1);
-    expect(dispositionSeparationErrors({ lines: [line("R12", VINYL)] }, [processed.payload])).toHaveLength(1);
-    expect(dispositionSeparationErrors({ lines: [line("R3")] }, [])).toHaveLength(1);
+    for (const route of ["redeploy", "resale", "donate", "recycle"]) {
+      expect(dispositionSeparationErrors({ lines: [line(route, VINYL)] }, [processed.payload]), route).toHaveLength(1);
+    }
+    expect(dispositionSeparationErrors({ lines: [line("recycle")] }, [])).toHaveLength(1);
   });
 
-  it("accepts energy recovery and disposal for a fraction that was never separated", () => {
-    expect(dispositionSeparationErrors({ lines: [line("R1", VINYL), line("D10", VINYL)] }, [processed.payload])).toEqual([]);
+  it("accepts recovery and disposal for a fraction that was never separated", () => {
+    expect(dispositionSeparationErrors({ lines: [line("recovery", VINYL), line("disposal", VINYL)] }, [processed.payload])).toEqual([]);
   });
 
   it("matches the material term exactly", () => {
     const other = { fractions: [{ material: `${PLYWOOD}_birch`, mass_kg: 1, weighed_event: "evt_01JC8K2M4N6P8R0T2V4X6Z8B09" }] };
-    expect(dispositionSeparationErrors({ lines: [line("R3")] }, [other])).toHaveLength(1);
+    expect(dispositionSeparationErrors({ lines: [line("recycle")] }, [other])).toHaveLength(1);
   });
 });
 

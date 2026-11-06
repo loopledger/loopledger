@@ -341,29 +341,36 @@ describe("REQ-LEDGER-006 tenant_id is checked on read", () => {
   });
 });
 
-describe("REQ-EVENT-017 the ledger refuses a reuse or recycle line for a fraction never separated", () => {
+describe("REQ-EVENT-017 the ledger refuses a redeploy, resale, donate or recycle line for a fraction never separated", () => {
   const PLYWOOD = "https://loopledger.org/vocab/material/plywood";
   const VINYL = "https://loopledger.org/vocab/material/vinyl";
-  const line = (rd_code: string, material: string, mass_kg: number) => ({ material, mass_kg, rd_code, facility_party_id: party(2), end_of_waste: false });
+  const line = (route: string, material: string, mass_kg: number, classification?: unknown[]) => ({
+    material,
+    mass_kg,
+    route,
+    ...(classification ? { classification } : {}),
+    facility_party_id: party(2),
+    end_of_waste: false,
+  });
   const disposition = (n: number, family: string, lines: unknown[]): EventRow => base(n, "disposition_final", { payload: { family, lines } });
   const processed = (n: number): EventRow =>
     base(n, "processed", { payload: { operation: "sort", fractions: [{ material: PLYWOOD, mass_kg: 60, weighed_event: evt(9) }] } });
   const append = (ledger: Ledger, event: EventRow) => ledger.append({ ...event, signatures: [sig(event, "receiver", "receiver"), sig(event, "other", "operator")] });
 
-  it("appends a recycle line for a separated material and energy recovery for one that was not", async () => {
+  it("appends a recycle line for a separated material and recovery for one that was not", async () => {
     const { ledger } = setup();
     const sorted = processed(1);
     await ledger.append({ ...sorted, signatures: [sig(sorted, "scale", "facility")] });
-    const final = disposition(2, "recycle", [line("R3", PLYWOOD, 60), line("R1", VINYL, 10)]);
+    const final = disposition(2, "recycle", [line("recycle", PLYWOOD, 60), line("recovery", VINYL, 10)]);
     expect(await append(ledger, final)).toEqual({ event_id: final.event_id, held: false });
   });
 
   it("refuses a recycle line for a material no processed event on the asset separated", async () => {
     const { ledger } = setup();
-    await expect(append(ledger, disposition(2, "recycle", [line("R3", VINYL, 60)]))).rejects.toThrow(/never separated/);
+    await expect(append(ledger, disposition(2, "recycle", [line("recycle", VINYL, 60)]))).rejects.toThrow(/never separated/);
     const sorted = processed(1);
     await ledger.append({ ...sorted, signatures: [sig(sorted, "scale", "facility")] });
-    await expect(append(ledger, disposition(3, "recycle", [line("R3", PLYWOOD, 60), line("R4", VINYL, 10)]))).rejects.toThrow(/never separated/);
+    await expect(append(ledger, disposition(3, "recycle", [line("recycle", PLYWOOD, 60), line("redeploy", VINYL, 10)]))).rejects.toThrow(/never separated/);
     expect((await ledger.log()).map((e) => e.event_type)).toEqual(["processed"]);
   });
 
@@ -371,6 +378,16 @@ describe("REQ-EVENT-017 the ledger refuses a reuse or recycle line for a fractio
     const { ledger } = setup();
     const sorted = processed(1);
     await ledger.append({ ...sorted, signatures: [sig(sorted, "scale", "facility")] });
-    await expect(append(ledger, disposition(2, "disposal", [line("R3", PLYWOOD, 60)]))).rejects.toThrow(/heaviest line/);
+    await expect(append(ledger, disposition(2, "disposal", [line("recycle", PLYWOOD, 60)]))).rejects.toThrow(/heaviest line/);
+  });
+
+  it("REQ-EVENT-020 refuses a known scheme's code that contradicts the route, and accepts an unknown scheme's", async () => {
+    const { ledger } = setup();
+    const sorted = processed(1);
+    await ledger.append({ ...sorted, signatures: [sig(sorted, "scale", "facility")] });
+    const eu = (code: string) => [{ scheme: "eu-wfd-2008-98", code }];
+    await expect(append(ledger, disposition(2, "recycle", [line("recycle", PLYWOOD, 60, eu("R1"))]))).rejects.toThrow(/contradicts route/);
+    const other = disposition(3, "recycle", [line("recycle", PLYWOOD, 60, [{ scheme: "ewc", code: "D10" }])]);
+    expect(await append(ledger, other)).toEqual({ event_id: other.event_id, held: false });
   });
 });
