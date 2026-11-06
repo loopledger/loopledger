@@ -2,7 +2,7 @@ import { createHash, createPrivateKey, createPublicKey } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { MemoryEventStore, MemoryEvidenceStore, MemoryKeyResolver } from "@loopledger/adapter-memory";
 import type { EventRow, EvidenceStore, LedgerMode, SignatureRow } from "@loopledger/ports";
-import { Ledger, canonical, eventHash, jwsHeader, merkleRoot, signEvent } from "../src/index";
+import { Ledger, VERIFIERS, WEBCRYPTO_VERIFIERS, canonical, detachedSignature, eventHash, jwsHeader, jwsSigningInput, merkleRoot, signEvent, signEventWebCrypto } from "../src/index";
 import type { EventInput } from "../src/index";
 
 const TENANT = "acme-hospitality";
@@ -239,6 +239,35 @@ describe("REQ-LEDGER-004 every signature carries alg and verification dispatches
     await expect(ledger.append({ ...third, signatures: [sig(third, "scale", "scale", { alg: "ML-DSA-65" })] })).rejects.toThrow(/unknown alg/);
     await expect(ledger.append({ ...third, signatures: [sig(third, "scale", "scale", { alg: "toString" })] })).rejects.toThrow(/unknown alg/);
     await expect(ledger.append({ ...third, signatures: [sig(third, "scale", "scale", { alg: undefined as never })] })).rejects.toThrow(/unknown alg/);
+  });
+
+  it("signs and verifies identically through WebCrypto and node:crypto", async () => {
+    const seed = createHash("sha256").update("seed:sender").digest();
+    const webKey = await globalThis.crypto.subtle.importKey("pkcs8", Buffer.concat([PKCS8_ED25519, seed]), "Ed25519", false, ["sign"]);
+    const event = weighed(8);
+    const fields = { sig_id: "sig_web", key_id: "key-sender", party_id: party(1), role_at_signing: "sender", signed_at: "2026-02-02T08:00:10Z" };
+    const viaNode = signEvent(event, keys.sender.privateKey, fields);
+    const viaWeb = await signEventWebCrypto(event, webKey, fields);
+    expect(viaWeb).toEqual(viaNode);
+    const input = jwsSigningInput(event, viaNode);
+    const bytes = detachedSignature(viaNode);
+    for (const table of [VERIFIERS, WEBCRYPTO_VERIFIERS]) {
+      expect(await table.EdDSA!(keys.sender.public_key, input, bytes)).toBe(true);
+      expect(await table.EdDSA!(keys.sender.public_key, Buffer.from("other"), bytes)).toBe(false);
+      expect(await table.EdDSA!(keys.receiver.public_key, input, bytes)).toBe(false);
+      expect(Object.keys(table)).toEqual(["EdDSA"]);
+    }
+  });
+
+  it("appends through a ledger that verifies with WebCrypto and refuses the legacy alg", async () => {
+    const resolver = setup().resolver;
+    const ledger = new Ledger(new MemoryEventStore("evidence"), new MemoryEvidenceStore("evidence"), resolver, "evidence", WEBCRYPTO_VERIFIERS);
+    const event = weighed(9);
+    expect((await ledger.append({ ...event, signatures: [sig(event, "scale", "scale")] })).held).toBe(false);
+    const legacy = weighed(10);
+    await expect(ledger.append({ ...legacy, signatures: [sig(legacy, "scale", "scale", { alg: "Ed25519" })] })).rejects.toThrow(/unknown alg/);
+    const forged = weighed(11);
+    await expect(ledger.append({ ...forged, signatures: [sig(forged, "other", "scale", { key_id: "key-scale", party_id: party(3) })] })).rejects.toThrow(/does not verify/);
   });
 
   it("refuses a signature whose alg differs from its key's", async () => {

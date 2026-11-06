@@ -86,8 +86,28 @@ export const signEvent = (
   return { ...body, signature: `${jwsHeader(alg, fields.key_id)}..${value}` };
 };
 
+/** Signs the event as `signEvent` does, with a WebCrypto Ed25519 private key. The signed bytes are the same. */
+export const signEventWebCrypto = async (
+  event: EventRow,
+  privateKey: CryptoKey,
+  fields: Fields & Pick<Signature, "sig_id" | "key_id"> & { alg?: string },
+): Promise<Signature> => {
+  const alg = fields.alg ?? "EdDSA";
+  const body = {
+    sig_id: fields.sig_id,
+    party_id: fields.party_id,
+    key_id: fields.key_id,
+    alg,
+    signed_hash: eventHash(event),
+    signed_at: fields.signed_at,
+    role_at_signing: fields.role_at_signing,
+  };
+  const value = Buffer.from(await globalThis.crypto.subtle.sign("Ed25519", privateKey, new Uint8Array(jwsSigningInput(event, body)))).toString("base64url");
+  return { ...body, signature: `${jwsHeader(alg, fields.key_id)}..${value}` };
+};
+
 /** Verifies the signature bytes over `message` with a base64 SPKI DER public key. */
-export type Verifier = (publicKey: string, message: Uint8Array, signature: Uint8Array) => boolean;
+export type Verifier = (publicKey: string, message: Uint8Array, signature: Uint8Array) => boolean | Promise<boolean>;
 
 const eddsa: Verifier = (publicKey, message, signature) => {
   const key = createPublicKey({ key: Buffer.from(publicKey, "base64"), format: "der", type: "spki" });
@@ -96,6 +116,14 @@ const eddsa: Verifier = (publicKey, message, signature) => {
 
 /** Verification dispatches on the JOSE `alg`. `EdDSA` (Ed25519 curve, RFC 8037) is the only suite in v1 (no PQC). */
 export const VERIFIERS: Readonly<Record<string, Verifier>> = { EdDSA: eddsa };
+
+const eddsaWebCrypto: Verifier = async (publicKey, message, signature) => {
+  const key = await globalThis.crypto.subtle.importKey("spki", Buffer.from(publicKey, "base64"), "Ed25519", false, ["verify"]);
+  return globalThis.crypto.subtle.verify("Ed25519", key, new Uint8Array(signature), new Uint8Array(message));
+};
+
+/** The same table through WebCrypto, for the browser: identical signing input and identical results. */
+export const WEBCRYPTO_VERIFIERS: Readonly<Record<string, Verifier>> = { EdDSA: eddsaWebCrypto };
 
 const leaf = (event: EventRow): Buffer => createHash("sha256").update(Buffer.concat([Buffer.from([0]), Buffer.from(canonical(eventRow(event)))])).digest();
 const node = (left: Buffer, right: Buffer): Buffer => createHash("sha256").update(Buffer.concat([Buffer.from([1]), left, right])).digest();

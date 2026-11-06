@@ -6,7 +6,7 @@ import type { EventRow, EventStore, EvidenceStore, KeyResolver, LedgerMode, Sign
 import { VERIFIERS, detachedSignature, eventHash, eventRow, jwsSigningInput, sha256 } from "./crypto";
 import type { Verifier } from "./crypto";
 
-export { canonical, detachedSignature, eventHash, jwsHeader, jwsSigningInput, merkleRoot, sha256, signEvent, signingPayload } from "./crypto";
+export { VERIFIERS, WEBCRYPTO_VERIFIERS, canonical, detachedSignature, eventHash, jwsHeader, jwsSigningInput, merkleRoot, sha256, signEvent, signEventWebCrypto, signingPayload } from "./crypto";
 
 export type EventInput = EventRow & { signatures?: SignatureRow[] };
 
@@ -193,7 +193,7 @@ export class Ledger {
       }
       let ok = false;
       try {
-        ok = verifier!(key.public_key, jwsSigningInput(event, row), value);
+        ok = await verifier!(key.public_key, jwsSigningInput(event, row), value);
       } catch {
         ok = false;
       }
