@@ -152,10 +152,10 @@
     "event_type": "weighed",
     "occurred_at": "2026-09-21T08:00:00Z",
     "recorded_at": "2026-09-21T08:00:30Z",
-    "payload": { "mass_kg": 218, "scale_id": "scale-hub1-a", "certification_id": "NTEP-2026-0042" },
+    "payload": { "mass_kg": 218, "tare_kg": 0, "uncertainty": { "value_kg": 0.2, "basis": "scale accuracy class, k=2" }, "scale_id": "scale-hub1-a", "certification_id": "NTEP-2026-0042" },
     "held": false,
     "signatures": [
-      { "sig_id": "sig_07", "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P06", "key_id": "did:key:z6MksdvwwmoMKip64VTXTLrsMf6jpBCrKZ41GgCVdpFE2kuC", "alg": "EdDSA", "signed_hash": "sha256:0a2f7b11a3d5e40cb5e1cd3fc497703d9b3aec3351cf645e10a7a7d99455cc38", "signed_at": "2026-09-21T08:00:31Z", "role_at_signing": "scale", "signature": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa3Nkdnd3bW9NS2lwNjRWVFhUTHJzTWY2anBCQ3JLWjQxR2dDVmRwRkUya3VDIn0..5dJmPUardFOKZ8CXQhtrFKvXZX7IVG2KqRUzAHxzO9Ij8oS8z0HWbkZu2Hz3Jw-EqBjgWB2neKssabFFGyHPBA" }
+      { "sig_id": "sig_07", "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P06", "key_id": "did:key:z6MksdvwwmoMKip64VTXTLrsMf6jpBCrKZ41GgCVdpFE2kuC", "alg": "EdDSA", "signed_hash": "sha256:5e9a692c04dc6450978f90976ed2da647130fc1079f80fd547cadd547b4419b2", "signed_at": "2026-09-21T08:00:31Z", "role_at_signing": "scale", "signature": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa3Nkdnd3bW9NS2lwNjRWVFhUTHJzTWY2anBCQ3JLWjQxR2dDVmRwRkUya3VDIn0.._0kf5CZVbHzt_CVqdHRS0LJ1LXU0C2GcxIoW8RFcqoMYkNcpgFAgrQzAd6pvQ7ePBI8cZFPDZYo0WfSO-TXhBg" }
     ]
   },
   {
@@ -177,12 +177,12 @@
       "joints_opened": [
         { "joint_id": "j-4", "joint_type": "https://loopledger.org/vocab/joint_type/bonded", "catalog_ref": { "manufacturer": { "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P08" }, "model_reference": "BTH-2S", "version": 2 }, "outcome": "destroyed", "labor_min": 30 }
       ],
-      "fractions": [{ "material": "https://loopledger.org/vocab/material/plywood", "mass_kg": 66.9, "weighed_event": "evt_01JC8K2M4N6P8R0T2V4X6Z8B09" }],
+      "fractions": [{ "material": "https://loopledger.org/vocab/material/plywood", "mass_kg": 66.9, "lot": "ast_01JC8K2M4N6P8R0T2V4X6Z8A02", "weighed_event": "evt_01JC8K2M4N6P8R0T2V4X6Z8B09" }],
       "child_asset_ids": ["ast_01JC8K2M4N6P8R0T2V4X6Z8A02"]
     },
     "held": false,
     "signatures": [
-      { "sig_id": "sig_08", "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P05", "key_id": "did:key:z6MkoJ9Y5aLKX8xUHSiU1qF17Dwb8VqvRAn5737M3CXuAUix", "alg": "EdDSA", "signed_hash": "sha256:e1413126e9376580750009440011bcd5d3704bc39d78146473b7f44698a7c4b3", "signed_at": "2026-09-22T11:01:00Z", "role_at_signing": "facility", "signature": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa29KOVk1YUxLWDh4VUhTaVUxcUYxN0R3YjhWcXZSQW41NzM3TTNDWHVBVWl4In0..Rxm_njPLjbntt3jXjv0CJB4XL2aEaNBpNkpfFjoLn7Z89mZAeh9R03Iqwf3sN7EZKMIYC1CBilBzLc678VteBQ" }
+      { "sig_id": "sig_08", "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P05", "key_id": "did:key:z6MkoJ9Y5aLKX8xUHSiU1qF17Dwb8VqvRAn5737M3CXuAUix", "alg": "EdDSA", "signed_hash": "sha256:b119af8bafefd1809ef8699d881ac3e29f4b1f04bc1fe1c7ce2ab78a460afd5f", "signed_at": "2026-09-22T11:01:00Z", "role_at_signing": "facility", "signature": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa29KOVk1YUxLWDh4VUhTaVUxcUYxN0R3YjhWcXZSQW41NzM3TTNDWHVBVWl4In0..mlezzp2rU_o8GwMyYUqXnF4qaNJ0r1kFY-VNfVy1YR4aSwbfuemGsQix84agSVs7GddoEUCa6oRsrUTPE--kDw" }
     ],
     "evidence": [
       { "evidence_id": "ev-photo-before", "kind": "photo", "content_hash": "sha256:a1b2c3d4e5f60718a1b2c3d4e5f60718a1b2c3d4e5f60718a1b2c3d4e5f60718", "storage_ref": "cas://b1b2c3d4e5f60718" },
@@ -198,10 +198,10 @@
     "event_type": "weighed",
     "occurred_at": "2026-09-22T10:30:00Z",
     "recorded_at": "2026-09-22T10:30:20Z",
-    "payload": { "mass_kg": 66.9, "scale_id": "scale-hub1-a", "certification_id": "NTEP-2026-0042" },
+    "payload": { "mass_kg": 66.9, "tare_kg": 1.5, "uncertainty": { "value_kg": 0.05, "basis": "scale accuracy class, k=2" }, "moisture_basis": { "moisture_pct": 11, "state": "as_received" }, "scale_id": "scale-hub1-a", "certification_id": "NTEP-2026-0042" },
     "held": false,
     "signatures": [
-      { "sig_id": "sig_09", "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P06", "key_id": "did:key:z6MksdvwwmoMKip64VTXTLrsMf6jpBCrKZ41GgCVdpFE2kuC", "alg": "EdDSA", "signed_hash": "sha256:c436592f8912e56ce493772d2c2a2948f95588a92b4cd960367457d7d3269cb3", "signed_at": "2026-09-22T10:30:21Z", "role_at_signing": "scale", "signature": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa3Nkdnd3bW9NS2lwNjRWVFhUTHJzTWY2anBCQ3JLWjQxR2dDVmRwRkUya3VDIn0..E-LtwJuZRlJUi9A3G5D9xuiiicXQwSTRBB2wZoKpMr5oepHqZMwLy_F-S4gMOVnWOnZYwpmyyVkzbbXzOY5hBw" }
+      { "sig_id": "sig_09", "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P06", "key_id": "did:key:z6MksdvwwmoMKip64VTXTLrsMf6jpBCrKZ41GgCVdpFE2kuC", "alg": "EdDSA", "signed_hash": "sha256:8be7eaf457619d67cee147d32e62c17a731687e0e95074da54f818a0a187c837", "signed_at": "2026-09-22T10:30:21Z", "role_at_signing": "scale", "signature": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa3Nkdnd3bW9NS2lwNjRWVFhUTHJzTWY2anBCQ3JLWjQxR2dDVmRwRkUya3VDIn0..ewlC2B-HSq2284RowMfR9-fuPzC5M213QGw20Hf4QTl9ZnKNfbP2TPJhJcX3Hzd-9dGpxIHxCft3acr4NZwWBA" }
     ]
   },
   {

@@ -6,7 +6,7 @@ import Ajv2020 from "ajv/dist/2020.js";
 import addFormats from "ajv-formats";
 import jsonld from "jsonld";
 import { describe, expect, it } from "vitest";
-import { EVENT_TYPES, REQUIRED_SIGNERS, catalogErrors, dispositionFamilyErrors, dispositionSeparationErrors, requiredSigners, routeGroup, signerBindingErrors } from "../src/index";
+import { BIO_BASED_MATERIALS, EVENT_TYPES, REQUIRED_SIGNERS, catalogErrors, dispositionFamilyErrors, dispositionSeparationErrors, isBioBased, requiredSigners, routeGroup, signerBindingErrors, validateEventSet } from "../src/index";
 import type { EventType } from "../src/index";
 
 type Json = any;
@@ -148,6 +148,9 @@ describe("REQ-SPEC-003 the validation suite rejects passports and events that br
     delete badEvent.payload.certification_id;
     expect(passportOk(badPassport)).toBe(false);
     expect(eventOk(badEvent)).toBe(false);
+    const badSet = copy(events);
+    badSet.find((e: Json) => e.event_type === "processed" && e.payload.fractions).payload.fractions[0].mass_kg = 1;
+    expect(validateEventSet(badSet)).not.toEqual([]);
   });
 });
 
@@ -1067,6 +1070,83 @@ describe("REQ-EVENT-011 a joint outcome carries the joint type and catalog revis
     delete doc.evidence;
     doc.payload.joints_opened[0].cause = { term: "https://loopledger.org/vocab/cause/removal_damage", design_addressable: false };
     expect(eventOk(doc)).toBe(true);
+  });
+});
+
+describe("REQ-EVENT-018 a fraction's weighed event names its lot and its net mass equals mass_kg", () => {
+  const set = (): Json[] => copy(events);
+  const fractionOf = (all: Json[]): Json => all.find((e) => e.event_type === "processed" && e.payload.fractions).payload.fractions[0];
+  const weighedOf = (all: Json[]): Json => all.find((e) => e.event_id === fractionOf(all).weighed_event);
+
+  it("accepts the example events, where each fraction is weighed on its own lot", () => {
+    expect(validateEventSet(set())).toEqual([]);
+    expect(weighedOf(set()).asset_ids).toEqual([fractionOf(set()).lot]);
+  });
+
+  it("rejects a fraction with no lot in the schema", () => {
+    const doc = event("processed");
+    delete doc.payload.fractions[0].lot;
+    expect(eventOk(doc)).toBe(false);
+  });
+
+  it("rejects a fraction whose weighed event is missing from the set or is not a weighed event", () => {
+    const missing = set();
+    fractionOf(missing).weighed_event = "evt_01JC8K2M4N6P8R0T2V4X6Z8B99";
+    expect(validateEventSet(missing)).toHaveLength(1);
+    const wrongType = set();
+    fractionOf(wrongType).weighed_event = wrongType.find((e) => e.event_type === "removed").event_id;
+    expect(validateEventSet(wrongType)).toHaveLength(1);
+  });
+
+  it("rejects a weighing of another lot, as the fixture's parent weighing was", () => {
+    const parent = set();
+    fractionOf(parent).weighed_event = parent.find((e) => e.event_type === "weighed").event_id;
+    expect(validateEventSet(parent).join("\n")).toMatch(/does not name lot/);
+    const lot = set();
+    fractionOf(lot).lot = "ast_01JC8K2M4N6P8R0T2V4X6Z8A09";
+    expect(validateEventSet(lot).join("\n")).toMatch(/not one of the child assets/);
+  });
+
+  it("rejects a net mass that differs from mass_kg by more than 0.01 kg, and accepts one within it", () => {
+    const off = set();
+    weighedOf(off).payload.mass_kg = 66.92;
+    expect(validateEventSet(off).join("\n")).toMatch(/differs from mass_kg/);
+    const near = set();
+    weighedOf(near).payload.mass_kg = 66.91;
+    expect(validateEventSet(near)).toEqual([]);
+  });
+});
+
+describe("REQ-EVENT-019 weighed carries tare_kg and uncertainty, and moisture_basis for bio-based fractions", () => {
+  it("rejects a weighed event without tare_kg or uncertainty, or with an incomplete uncertainty", () => {
+    for (const field of ["tare_kg", "uncertainty"]) {
+      const doc = event("weighed");
+      delete doc.payload[field];
+      expect(eventOk(doc), field).toBe(false);
+    }
+    const doc = event("weighed");
+    delete doc.payload.uncertainty.basis;
+    expect(eventOk(doc)).toBe(false);
+  });
+
+  it("rejects a moisture_basis with an unknown state", () => {
+    const doc = event("weighed", 1);
+    expect(doc.payload.moisture_basis.state).toBe("as_received");
+    expect(eventOk(doc)).toBe(true);
+    doc.payload.moisture_basis.state = "dry";
+    expect(eventOk(doc)).toBe(false);
+  });
+
+  it("lists wood and plywood as bio-based and rejects a wood fraction whose weighing has no moisture_basis", () => {
+    expect(BIO_BASED_MATERIALS).toEqual(["wood", "plywood"]);
+    expect(isBioBased("https://loopledger.org/vocab/material/plywood")).toBe(true);
+    expect(isBioBased("https://loopledger.org/vocab/material/steel")).toBe(false);
+    const all: Json[] = copy(events);
+    const fraction = all.find((e) => e.event_type === "processed" && e.payload.fractions).payload.fractions[0];
+    delete all.find((e) => e.event_id === fraction.weighed_event).payload.moisture_basis;
+    expect(validateEventSet(all).join("\n")).toMatch(/no moisture_basis/);
+    fraction.material = "https://loopledger.org/vocab/material/steel";
+    expect(validateEventSet(all)).toEqual([]);
   });
 });
 

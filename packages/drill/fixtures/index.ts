@@ -113,19 +113,25 @@ export const buildFixture = (): Fixture => {
     emit("telemetry", asset, at(started, -5), { metric: "life_used_pct", value: life, source_device: "dock-meter-1" }, ["device"]);
     emit("removed", asset, started, { cluster: "dining-room-north", method, started_at: started, ended_at: at(started, labor), crew_size: 2, joints_opened }, ["crew", "operator"]);
     const done = at(started, labor);
-    const weighedId = id("evt", seq + 2);
     const wear = 1 - (0.2 * life) / 100;
     // Bonded upholstery is not separated: only the frame and the plywood are weighed out as clean fractions.
     const kg = (value: number): number => Math.round(value * wear * 100) / 100;
-    const fractions = [
+    // Each fraction is weighed on its own lot, a child asset, after the parent's weighing (REQ-EVENT-018).
+    const parts = [
       { material: `${MATERIAL}steel`, kg: 91.6 },
       { material: `${MATERIAL}plywood`, kg: 87.6 },
       ...(upholsterySeparated ? [{ material: `${MATERIAL}vinyl`, kg: 38.8 }] : []),
-    ].map((f) => ({ material: f.material, mass_kg: kg(f.kg), weighed_event: weighedId }));
-    const children = [id("ast", 5000 + ++nextChild), id("ast", 5000 + ++nextChild)];
+    ];
+    const children = parts.map(() => id("ast", 5000 + ++nextChild));
+    const fractions = parts.map((f, i) => ({ material: f.material, mass_kg: kg(f.kg), lot: children[i]!, weighed_event: id("evt", seq + 3 + i) }));
     emit("processed", asset, at(done, 60), { operation: "separate", before_refs: [asset], after_refs: children, labor_min: item.label === "G4" ? 35 : 14, crew_size: 2, fractions, child_asset_ids: children }, ["facility"]);
-    const w = emit("weighed", asset, at(done, 90), { mass_kg: MASS_KG, scale_id: "scale-1", certification_id: "cert-2026-01" }, ["scale"]);
-    if (w !== weighedId) throw new Error("the weighed event id moved");
+    const scale = { tare_kg: 0, uncertainty: { value_kg: 0.05, basis: "scale accuracy class, k=2" }, scale_id: "scale-1", certification_id: "cert-2026-01" };
+    emit("weighed", asset, at(done, 90), { mass_kg: MASS_KG, ...scale }, ["scale"]);
+    fractions.forEach((f, i) => {
+      const moisture = f.material === `${MATERIAL}plywood` ? { moisture_basis: { moisture_pct: 11, state: "as_received" } } : {};
+      const w = emit("weighed", f.lot, at(done, 91 + i), { mass_kg: f.mass_kg, ...scale, ...moisture }, ["scale"]);
+      if (w !== f.weighed_event) throw new Error("the weighed event id moved");
+    });
     // One line per fraction (REQ-EVENT-016). A separated fraction is recycled (G4) or kept in use (G5); G4's bonded
     // upholstery was never separated, so it goes to energy recovery and the record claims no vinyl was recycled.
     const lines = fractions.map((f) => ({

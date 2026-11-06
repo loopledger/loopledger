@@ -262,13 +262,14 @@
       }
     },
     "fraction": {
-      "$comment": "Each fraction is weighed: weighed_event points at the signed weighed event.",
+      "$comment": "Each fraction is weighed on its own lot: lot is one of the separate payload's child_asset_ids and weighed_event points at the signed weighed event of that lot, whose net mass equals mass_kg. JSON Schema cannot compare two events, so validateEventSet in packages/spec/src/weighing.ts checks it.",
       "type": "object",
-      "required": ["material", "mass_kg", "weighed_event"],
+      "required": ["material", "mass_kg", "lot", "weighed_event"],
       "additionalProperties": false,
       "properties": {
         "material": { "$ref": "passport.schema.json#/$defs/material_term" },
         "mass_kg": { "type": "number", "minimum": 0 },
+        "lot": { "$ref": "passport.schema.json#/$defs/asset_id" },
         "weighed_event": { "$ref": "passport.schema.json#/$defs/event_id" }
       }
     },
@@ -391,10 +392,30 @@
     },
     "payload_weighed": {
       "type": "object",
-      "required": ["mass_kg", "scale_id", "certification_id"],
+      "$comment": "mass_kg is the net mass; the gross is mass_kg + tare_kg. moisture_basis is required for a bio-based fraction (BIO_BASED_MATERIALS in packages/spec/src/weighing.ts), checked there.",
+      "required": ["mass_kg", "tare_kg", "uncertainty", "scale_id", "certification_id"],
       "additionalProperties": false,
       "properties": {
         "mass_kg": { "type": "number", "minimum": 0 },
+        "tare_kg": { "type": "number", "minimum": 0 },
+        "uncertainty": {
+          "type": "object",
+          "required": ["value_kg", "basis"],
+          "additionalProperties": false,
+          "properties": {
+            "value_kg": { "type": "number", "minimum": 0 },
+            "basis": { "type": "string", "minLength": 1 }
+          }
+        },
+        "moisture_basis": {
+          "type": "object",
+          "required": ["moisture_pct", "state"],
+          "additionalProperties": false,
+          "properties": {
+            "moisture_pct": { "type": "number", "minimum": 0 },
+            "state": { "enum": ["as_received", "oven_dry"] }
+          }
+        },
         "scale_id": { "type": "string", "minLength": 1 },
         "certification_id": { "type": "string", "minLength": 1 }
       }
