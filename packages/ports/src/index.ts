@@ -39,7 +39,12 @@ export interface EventRow {
   [field: string]: unknown;
 }
 
+/** Fixed when a ledger and its stores are created. A `pilot` ledger takes test keys only and its events are never evidence (REQ-LEDGER-008). */
+export type LedgerMode = "pilot" | "evidence";
+
 export interface EventStore {
+  /** The mode the store was created with; the ledger refuses a store whose mode differs from its own. */
+  readonly mode: LedgerMode;
   /** Throws when the `event_id` is already in the log. */
   append(event: EventRow): Promise<void>;
   /** Throws when the event is unknown or the `sig_id` is already stored. */
@@ -51,6 +56,7 @@ export interface EventStore {
 }
 
 export interface EvidenceStore {
+  readonly mode: LedgerMode;
   /** Stores the bytes and returns their hash, `sha256:<hex>`. */
   put(bytes: Uint8Array): Promise<string>;
   get(hash: string): Promise<Uint8Array | undefined>;
@@ -61,6 +67,8 @@ export interface KeyRecord {
   /** The party this key belongs to. A signature made with it counts only for this party. */
   party_id: string;
   alg: string;
+  /** `test` keys sign pilot events only; a pilot ledger refuses a `production` key and an evidence ledger a `test` key (REQ-LEDGER-008). */
+  mode: "test" | "production";
   /** Base64 of the SPKI DER public key. */
   public_key: string;
   valid_from: string;

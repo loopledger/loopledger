@@ -1,11 +1,21 @@
 // In-memory adapters for the ledger ports. They back tests and the drill (LL-001).
 import { createHash } from "node:crypto";
-import type { EventRow, EventStore, EvidenceStore, KeyRecord, KeyResolver, SignatureRow } from "@loopledger/ports";
+import type { EventRow, EventStore, EvidenceStore, KeyRecord, KeyResolver, LedgerMode, SignatureRow } from "@loopledger/ports";
 
 export class MemoryEventStore implements EventStore {
   private readonly events = new Map<string, EventRow>();
   private readonly sigs = new Map<string, SignatureRow[]>();
   private readonly sigIds = new Set<string>();
+
+  constructor(readonly mode: LedgerMode = "evidence") {}
+
+  /** Drops the whole log. Only a pilot store can be discarded, and there is no per-event delete (REQ-LEDGER-010). */
+  discard(): void {
+    if (this.mode !== "pilot") throw new Error("only a pilot store can be discarded");
+    this.events.clear();
+    this.sigs.clear();
+    this.sigIds.clear();
+  }
 
   async append(event: EventRow): Promise<void> {
     if (this.events.has(event.event_id)) throw new Error(`event ${event.event_id} is already in the log`);
@@ -37,6 +47,14 @@ export class MemoryEventStore implements EventStore {
 
 export class MemoryEvidenceStore implements EvidenceStore {
   private readonly blobs = new Map<string, Uint8Array>();
+
+  constructor(readonly mode: LedgerMode = "evidence") {}
+
+  /** Drops every blob; pilot photos are test data too (REQ-LEDGER-010). */
+  discard(): void {
+    if (this.mode !== "pilot") throw new Error("only a pilot store can be discarded");
+    this.blobs.clear();
+  }
 
   async put(bytes: Uint8Array): Promise<string> {
     const hash = `sha256:${createHash("sha256").update(bytes).digest("hex")}`;

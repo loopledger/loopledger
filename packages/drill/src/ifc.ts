@@ -13,9 +13,11 @@ export interface IfcResult {
   step: string;
   /** Revisions left out for want of an `ifc_type_guid` or of a pooled row: `manufacturer model_reference version n`. */
   skipped: string[];
+  /** `true` when any row written is from a pilot ledger: the file is test data, never evidence (REQ-DRILL-013). */
+  pilot: boolean;
 }
 
-type Value = { kind: "real"; value: number } | { kind: "integer"; value: number } | { kind: "label"; value: string } | null;
+type Value = { kind: "boolean"; value: boolean } | { kind: "real"; value: number } | { kind: "integer"; value: number } | { kind: "label"; value: string } | null;
 
 const IFC_GUID = /^[0-3][0-9A-Za-z_$]{21}$/;
 const BASE64 = ["0123456789", "ABCDEFGHIJKLM", "NOPQRSTUVWXYZ", "abcdefghijklm", "nopqrstuvwxyz", "_$"].join("");
@@ -63,6 +65,7 @@ const properties = (item: CatalogRevision, row: RevisionRow): [string, Value][] 
     out.push([`${name}_leakage_leaked`, { kind: "integer", value: f.leakage.leaked }]);
     out.push([`${name}_leakage_rate`, f.leakage.rate === null ? null : { kind: "real", value: f.leakage.rate }]);
   };
+  out.push(["pilot", { kind: "boolean", value: row.pilot }]);
   out.push(["assets_removed", { kind: "integer", value: row.assets_removed }]);
   out.push(["leakage_born", { kind: "integer", value: row.leakage.born }]);
   out.push(["leakage_recovered", { kind: "integer", value: row.leakage.recovered }]);
@@ -84,6 +87,7 @@ const properties = (item: CatalogRevision, row: RevisionRow): [string, Value][] 
 
 const nominal = (value: Value): string => {
   if (value === null) return "$";
+  if (value.kind === "boolean") return `IFCBOOLEAN(${value.value ? ".T." : ".F."})`;
   if (value.kind === "real") return `IFCREAL(${real(value.value)})`;
   if (value.kind === "integer") return `IFCINTEGER(${value.value})`;
   return `IFCLABEL(${str(value.value)})`;
@@ -128,5 +132,5 @@ export const writeIfc = (rows: readonly RevisionRow[], catalog: readonly Catalog
     "END-ISO-10303-21;",
     "",
   ].join("\n");
-  return { step, skipped };
+  return { step, skipped, pilot: rows.some((r) => r.pilot) };
 };

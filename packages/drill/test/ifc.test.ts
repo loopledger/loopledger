@@ -110,7 +110,7 @@ describe("REQ-DRILL-008 the property values carry their basis and leakage beside
         expect(props.has(`removal_${method}_p50_min`)).toBe(true);
         expect(props.has(`removal_${method}_p90_min`)).toBe(true);
       }
-      expect([...props.values()].every((v) => v === "$" || /^IFC(REAL|INTEGER|LABEL)\(/.test(v))).toBe(true);
+      expect([...props.values()].every((v) => v === "$" || /^IFC(REAL|INTEGER|LABEL|BOOLEAN)\(/.test(v))).toBe(true);
     }
   });
 
@@ -130,7 +130,7 @@ describe("REQ-DRILL-008 the property values carry their basis and leakage beside
     for (const revision of ["G4", "G5"]) {
       const props = propsOf(revision);
       const figures = [...props.keys()].filter(
-        (k) => !k.endsWith("_basis") && !k.endsWith("_leakage_leaked") && !k.endsWith("_leakage_rate") && !k.startsWith("leakage_") && k !== "assets_removed" && !(k.startsWith("diversion_") && k !== "diversion_pct") && !IDENTITY.includes(k),
+        (k) => !k.endsWith("_basis") && !k.endsWith("_leakage_leaked") && !k.endsWith("_leakage_rate") && !k.startsWith("leakage_") && k !== "assets_removed" && k !== "pilot" && !(k.startsWith("diversion_") && k !== "diversion_pct") && !IDENTITY.includes(k),
       );
       expect(figures.length).toBeGreaterThanOrEqual(4);
       for (const name of figures) expect(props.get(`${name}_basis`), name).toMatch(/^IFCLABEL\('(measured n=\d+|declared)'\)$/);

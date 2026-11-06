@@ -44,6 +44,8 @@ export interface DiversionFigure extends Figure {
   residual_kg: number;
   /** Assets whose weighed input differs from fractions plus residual by more than `MASS_BALANCE_TOLERANCE`. */
   unbalanced: number;
+  /** `true` when the figure is computed from a pilot ledger: test data, never evidence (REQ-DRILL-013). */
+  pilot: boolean;
 }
 
 export interface JointFigure {
@@ -64,6 +66,8 @@ export interface RevisionRow {
   revision: string;
   /** `pooled` for every recovered asset, else `from-to` in `life_used_pct` points. */
   band: string;
+  /** `true` when the row is computed from a pilot ledger (REQ-DRILL-013). */
+  pilot: boolean;
   assets_removed: number;
   /** Revision-level in every row: an asset that never came back has no `life_used_pct` to band it by. */
   leakage: Leakage;
@@ -100,6 +104,8 @@ interface Options {
   bandWidth?: number;
   /** `Ledger.pending(tenant)`: held events, used only to count assets whose removal is held. */
   pending?: readonly EventRow[];
+  /** `ledger.mode === "pilot"`: marks every row and its diversion figure `pilot: true` (REQ-DRILL-013). */
+  pilot?: boolean;
 }
 
 type Outcome = "clean" | "damaged" | "destroyed";
@@ -233,7 +239,7 @@ const jointsOf = (asset: Asset): Joint[] =>
 const sum = (values: readonly number[]): number => values.reduce((s, v) => s + v, 0);
 
 /** Diversion: weighed mass on a reuse or recycling route over the weighed total, with the energy-recovery, disposal and residual masses beside it (REQ-DRILL-011, REQ-DRILL-012). */
-const diversion = (assets: readonly Asset[], leakage: Leakage): DiversionFigure => {
+const diversion = (assets: readonly Asset[], leakage: Leakage, pilot: boolean): DiversionFigure => {
   const weighed = assets.filter((a) => a.weighed);
   const total = sum(weighed.map((a) => Number(a.weighed!.payload.mass_kg)));
   const lines = weighed.flatMap((a) => ((a.final?.payload.lines ?? []) as { mass_kg: number; route: string }[]));
@@ -255,6 +261,7 @@ const diversion = (assets: readonly Asset[], leakage: Leakage): DiversionFigure 
     disposed_kg: routed((r) => r === "disposal"),
     residual_kg: residual,
     unbalanced,
+    pilot,
   };
 };
 
@@ -283,7 +290,7 @@ const jointFigures = (assets: readonly Asset[], leakage: Leakage): JointFigure[]
 
 type Identity = Pick<RevisionRow, "manufacturer" | "model_reference" | "version" | "revision">;
 
-const row = (item: CatalogRevision | undefined, identity: Identity, band: string, assets: readonly Asset[], leakage: Leakage): RevisionRow => {
+const row = (item: CatalogRevision | undefined, identity: Identity, band: string, assets: readonly Asset[], leakage: Leakage, pilot: boolean): RevisionRow => {
   const removed = assets.filter((a) => a.removed);
   const methods = new Set<Method>([...removed.map((a) => a.removed!.payload.method as Method), ...(band === POOLED ? (item?.recovery_method ?? []).map((m) => m.method) : [])]);
   const removal: RevisionRow["removal"] = {};
@@ -303,11 +310,12 @@ const row = (item: CatalogRevision | undefined, identity: Identity, band: string
   return {
     ...identity,
     band,
+    pilot,
     assets_removed: removed.length,
     leakage,
     removal,
     intact_removal_rate: figure(removed.length === 0 ? null : round(intact / removed.length), removed.length, leakage, removed.map((a) => a.removed!.event_id)),
-    diversion_pct: diversion(removed, leakage),
+    diversion_pct: diversion(removed, leakage, pilot),
     joints: jointFigures(removed, leakage),
   };
 };
@@ -318,6 +326,7 @@ const row = (item: CatalogRevision | undefined, identity: Identity, band: string
  */
 export const revisionPerformance = (events: readonly EventRow[], catalog: readonly CatalogRevision[], options: Options = {}): RevisionRow[] => {
   const width = options.bandWidth ?? LIFE_BAND_WIDTH;
+  const pilot = options.pilot ?? false;
   const assets = foldAssets(events, options.pending);
   const keys = new Map<string, Identity>();
   for (const c of catalog) keys.set(groupKey(c), { manufacturer: c.manufacturer, model_reference: c.model_reference, version: c.version, revision: c.label });
@@ -327,12 +336,12 @@ export const revisionPerformance = (events: readonly EventRow[], catalog: readon
     const group = assets.filter((a) => groupKey(a) === key);
     const item = catalog.find((c) => groupKey(c) === key);
     const leakage = leakageOf(group);
-    rows.push(row(item, identity, POOLED, group, leakage));
+    rows.push(row(item, identity, POOLED, group, leakage, pilot));
     const bands = new Map<number, string>();
     for (const a of group) if (a.removed && a.life !== undefined) bands.set(bandOf(a.life, width).from, bandOf(a.life, width).label);
     for (const [, label] of [...bands.entries()].sort(([a], [b]) => a - b)) {
       const inBand = group.filter((a) => a.removed && a.life !== undefined && bandOf(a.life, width).label === label);
-      rows.push(row(item, identity, label, inBand, leakage));
+      rows.push(row(item, identity, label, inBand, leakage, pilot));
     }
   }
   return rows;

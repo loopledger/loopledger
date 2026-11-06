@@ -1,7 +1,7 @@
 import { createHash, createPrivateKey, createPublicKey } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { MemoryEventStore, MemoryEvidenceStore, MemoryKeyResolver } from "@loopledger/adapter-memory";
-import type { EventRow, EvidenceStore, SignatureRow } from "@loopledger/ports";
+import type { EventRow, EvidenceStore, LedgerMode, SignatureRow } from "@loopledger/ports";
 import { Ledger, canonical, eventHash, jwsHeader, merkleRoot, signEvent } from "../src/index";
 import type { EventInput } from "../src/index";
 
@@ -22,14 +22,14 @@ const keyFor = (name: string) => {
 const keys = { sender: keyFor("sender"), receiver: keyFor("receiver"), scale: keyFor("scale"), other: keyFor("other") };
 const owners: Record<keyof typeof keys, number> = { sender: 1, receiver: 2, scale: 3, other: 4 };
 
-const setup = () => {
+const setup = (mode: LedgerMode = "evidence", keyMode: "test" | "production" = mode === "pilot" ? "test" : "production") => {
   const resolver = new MemoryKeyResolver();
   for (const [name, k] of Object.entries(keys)) {
-    resolver.register({ key_id: `key-${name}`, party_id: party(owners[name as keyof typeof keys]), alg: "EdDSA", public_key: k.public_key, valid_from: "2026-01-01T00:00:00Z", valid_until: "2027-01-01T00:00:00Z" });
+    resolver.register({ key_id: `key-${name}`, party_id: party(owners[name as keyof typeof keys]), alg: "EdDSA", mode: keyMode, public_key: k.public_key, valid_from: "2026-01-01T00:00:00Z", valid_until: "2027-01-01T00:00:00Z" });
   }
-  const events = new MemoryEventStore();
-  const evidence = new MemoryEvidenceStore();
-  return { events, evidence, resolver, ledger: new Ledger(events, evidence, resolver) };
+  const events = new MemoryEventStore(mode);
+  const evidence = new MemoryEvidenceStore(mode);
+  return { events, evidence, resolver, ledger: new Ledger(events, evidence, resolver, mode) };
 };
 
 const base = (n: number, type: string, extra: Partial<EventRow> = {}): EventRow => ({
@@ -214,7 +214,7 @@ describe("REQ-LEDGER-003 evidence is stored by hash and checked on read", () => 
   it("throws when the stored bytes no longer match the hash, or the hash is unknown", async () => {
     const { events, resolver, evidence } = setup();
     const hash = await evidence.put(new TextEncoder().encode("original"));
-    const corrupt: EvidenceStore = { put: (b) => evidence.put(b), get: async () => new TextEncoder().encode("tampered") };
+    const corrupt: EvidenceStore = { mode: "evidence", put: (b) => evidence.put(b), get: async () => new TextEncoder().encode("tampered") };
     const ledger = new Ledger(events, corrupt, resolver);
     await expect(ledger.readEvidence(hash)).rejects.toThrow(/does not match its hash/);
     await expect(ledger.readEvidence(`sha256:${"0".repeat(64)}`)).rejects.toThrow(/does not match its hash/);
@@ -243,9 +243,75 @@ describe("REQ-LEDGER-004 every signature carries alg and verification dispatches
 
   it("refuses a signature whose alg differs from its key's", async () => {
     const { ledger, resolver } = setup();
-    resolver.register({ key_id: "key-other-suite", party_id: party(3), alg: "ML-DSA-65", public_key: keys.scale.public_key, valid_from: "2026-01-01T00:00:00Z" });
+    resolver.register({ key_id: "key-other-suite", party_id: party(3), alg: "ML-DSA-65", mode: "production", public_key: keys.scale.public_key, valid_from: "2026-01-01T00:00:00Z" });
     const event = weighed();
     await expect(ledger.append({ ...event, signatures: [sig(event, "scale", "scale", { key_id: "key-other-suite" })] })).rejects.toThrow(/is not an EdDSA key/);
+  });
+});
+
+describe("REQ-LEDGER-008 the ledger mode is fixed at creation and decides which keys it takes", () => {
+  it("takes test keys in a pilot ledger and refuses a production key", async () => {
+    const pilot = setup("pilot");
+    expect(pilot.ledger.mode).toBe("pilot");
+    const event = weighed();
+    expect(await pilot.ledger.append({ ...event, signatures: [sig(event, "scale", "scale")] })).toEqual({ event_id: event.event_id, held: false });
+    const production = setup("pilot", "production");
+    await expect(production.ledger.append({ ...event, signatures: [sig(event, "scale", "scale")] })).rejects.toThrow(/not a test key/);
+  });
+
+  it("refuses an event made with a test key in an evidence ledger", async () => {
+    const { ledger } = setup("evidence", "test");
+    const event = weighed();
+    await expect(ledger.append({ ...event, signatures: [sig(event, "scale", "scale")] })).rejects.toThrow(/is a test key/);
+  });
+
+  it("refuses a countersignature made with a test key in an evidence ledger", async () => {
+    const { ledger, resolver } = setup("evidence");
+    resolver.register({ key_id: "key-test", party_id: party(5), alg: "EdDSA", mode: "test", public_key: keys.other.public_key, valid_from: "2026-01-01T00:00:00Z" });
+    const event = weighed();
+    await ledger.append(event);
+    await expect(ledger.countersign(event.event_id, sig(event, "other", "scale", { key_id: "key-test", party_id: party(5) }))).rejects.toThrow(/is a test key/);
+  });
+
+  it("refuses stores whose mode differs from the ledger's", () => {
+    const { resolver } = setup();
+    expect(() => new Ledger(new MemoryEventStore("pilot"), new MemoryEvidenceStore("evidence"), resolver, "evidence")).toThrow(/not evidence stores/);
+    expect(() => new Ledger(new MemoryEventStore("evidence"), new MemoryEvidenceStore("pilot"), resolver, "pilot")).toThrow(/not pilot stores/);
+  });
+});
+
+describe("REQ-LEDGER-009 nothing from a pilot ledger enters an evidence ledger", () => {
+  it("refuses to import a pilot event into an evidence ledger", async () => {
+    const pilot = setup("pilot");
+    const event = weighed();
+    await pilot.ledger.append({ ...event, signatures: [sig(event, "scale", "scale")] });
+    const evidence = setup("evidence");
+    await expect(evidence.ledger.importFrom(pilot.ledger, TENANT, event.event_id)).rejects.toThrow(/pilot ledger can't enter an evidence ledger/);
+    expect(await evidence.ledger.log()).toEqual([]);
+  });
+
+  it("imports within a mode", async () => {
+    const source = setup("pilot");
+    const event = weighed();
+    await source.ledger.append({ ...event, signatures: [sig(event, "scale", "scale")] });
+    const target = setup("pilot");
+    expect(await target.ledger.importFrom(source.ledger, TENANT, event.event_id)).toEqual({ event_id: event.event_id, held: false });
+  });
+});
+
+describe("REQ-LEDGER-010 a pilot ledger is discarded whole", () => {
+  it("drops every event, signature and blob of a pilot store, and refuses to discard an evidence store", async () => {
+    const { events, evidence, ledger } = setup("pilot");
+    const event = weighed();
+    await ledger.append({ ...event, signatures: [sig(event, "scale", "scale")] });
+    const hash = await ledger.putEvidence(new TextEncoder().encode("photo"));
+    events.discard();
+    evidence.discard();
+    expect(await ledger.log()).toEqual([]);
+    expect(await events.signatures(event.event_id)).toEqual([]);
+    expect(await evidence.get(hash)).toBeUndefined();
+    expect(() => new MemoryEventStore("evidence").discard()).toThrow(/only a pilot store/);
+    expect(() => new MemoryEvidenceStore("evidence").discard()).toThrow(/only a pilot store/);
   });
 });
 

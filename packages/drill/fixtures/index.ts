@@ -9,7 +9,7 @@ import { readFileSync } from "node:fs";
 import { MemoryEventStore, MemoryEvidenceStore, MemoryKeyResolver } from "@loopledger/adapter-memory";
 import { Ledger, signEvent } from "@loopledger/ledger";
 import type { EventInput } from "@loopledger/ledger";
-import type { KeyRecord, SignatureRow } from "@loopledger/ports";
+import type { KeyRecord, LedgerMode, SignatureRow } from "@loopledger/ports";
 import { catalogRevision } from "../src/catalog";
 import type { CatalogRevision } from "../src/catalog";
 
@@ -51,13 +51,14 @@ export interface Fixture {
   held_event_id: string;
 }
 
-export const buildFixture = (): Fixture => {
+export const buildFixture = (keyMode: KeyRecord["mode"] = "production"): Fixture => {
   const pairs = new Map(ROLES.map((role) => [role, generateKeyPairSync("ed25519")] as const));
   const party = (role: Role): string => id("pty", ROLES.indexOf(role) + 1);
   const keys: KeyRecord[] = ROLES.map((role) => ({
     key_id: `key-${role}`,
     party_id: party(role),
     alg: "EdDSA",
+    mode: keyMode,
     public_key: createPublicKey(pairs.get(role)!.privateKey).export({ format: "der", type: "spki" }).toString("base64"),
     valid_from: "2018-01-01T00:00:00Z",
     valid_until: "2030-01-01T00:00:00Z",
@@ -183,11 +184,11 @@ export const buildFixture = (): Fixture => {
 };
 
 /** Appends the fixture to a ledger on the in-memory adapters (LL-001). Every signature is verified on the way in. */
-export const loadFixture = async (): Promise<{ fixture: Fixture; ledger: Ledger }> => {
-  const fixture = buildFixture();
+export const loadFixture = async (mode: LedgerMode = "evidence"): Promise<{ fixture: Fixture; ledger: Ledger }> => {
+  const fixture = buildFixture(mode === "pilot" ? "test" : "production");
   const resolver = new MemoryKeyResolver();
   for (const key of fixture.keys) resolver.register(key);
-  const ledger = new Ledger(new MemoryEventStore(), new MemoryEvidenceStore(), resolver);
+  const ledger = new Ledger(new MemoryEventStore(mode), new MemoryEvidenceStore(mode), resolver, mode);
   for (const event of fixture.events) await ledger.append(event);
   return { fixture, ledger };
 };

@@ -2,7 +2,7 @@
 // Events are never updated. A countersignature is a new signature row, and `held` is derived from the rows.
 import { EVENT_TYPES, dispositionClassificationErrors, dispositionFamilyErrors, dispositionSeparationErrors, requiredSigners, signerBindingErrors } from "@loopledger/spec";
 import type { EventType } from "@loopledger/spec";
-import type { EventRow, EventStore, EvidenceStore, KeyResolver, SignatureRow } from "@loopledger/ports";
+import type { EventRow, EventStore, EvidenceStore, KeyResolver, LedgerMode, SignatureRow } from "@loopledger/ports";
 import { VERIFIERS, detachedSignature, eventHash, eventRow, jwsSigningInput, sha256 } from "./crypto";
 import type { Verifier } from "./crypto";
 
@@ -30,9 +30,22 @@ export class Ledger {
     private readonly events: EventStore,
     private readonly evidence: EvidenceStore,
     private readonly keys: KeyResolver,
+    /** Fixed at creation (REQ-LEDGER-008). Both stores must carry the same mode. */
+    readonly mode: LedgerMode = "evidence",
     verifiers: Readonly<Record<string, Verifier>> = VERIFIERS,
   ) {
+    if (events.mode !== mode || evidence.mode !== mode) refuse(`the stores are not ${mode} stores`);
     this.verifiers = verifiers;
+  }
+
+  /**
+   * Appends an event, with its signatures, from another ledger. Nothing leaves a pilot ledger for an evidence ledger:
+   * the check is on the ledgers' modes, not on the event (REQ-LEDGER-009).
+   */
+  async importFrom(source: Ledger, tenantId: string, eventId: string): Promise<Appended> {
+    if (source.mode === "pilot" && this.mode === "evidence") refuse("events of a pilot ledger can't enter an evidence ledger");
+    const { held: _held, signatures, ...event } = await source.read(tenantId, eventId);
+    return this.append({ ...event, signatures });
   }
 
   /**
@@ -172,6 +185,8 @@ export class Ledger {
     else {
       if (key.party_id !== row.party_id) refuse(`key ${row.key_id} does not belong to party ${row.party_id}`);
       if (key.alg !== row.alg) refuse(`key ${row.key_id} is not an ${row.alg} key`);
+      if (this.mode === "pilot" && key.mode !== "test") refuse(`key ${row.key_id} is not a test key: a pilot ledger takes test keys only`);
+      if (this.mode === "evidence" && key.mode !== "production") refuse(`key ${row.key_id} is a test key: an evidence ledger refuses it`);
       const at = time(row.signed_at);
       if (Number.isNaN(at) || at < time(key.valid_from) || (key.valid_until !== undefined && at > time(key.valid_until))) {
         refuse(`signed_at is outside the validity window of key ${row.key_id}`);
