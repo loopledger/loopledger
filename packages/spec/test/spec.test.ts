@@ -6,7 +6,7 @@ import Ajv2020 from "ajv/dist/2020.js";
 import addFormats from "ajv-formats";
 import jsonld from "jsonld";
 import { describe, expect, it } from "vitest";
-import { BIO_BASED_MATERIALS, EVENT_TYPES, REQUIRED_SIGNERS, catalogErrors, dispositionClassificationErrors, dispositionFamilyErrors, dispositionSeparationErrors, isBioBased, requiredSigners,signerBindingErrors, validateEventSet } from "../src/index";
+import { BIO_BASED_MATERIALS, EVENT_TYPES, REQUIRED_SIGNERS, catalogErrors, dispositionClassificationErrors, dispositionFamilyErrors, dispositionSeparationErrors, isBioBased, requiredSigners,signerBindingErrors, validateEvent, validateEventSet } from "../src/index";
 import type { EventType } from "../src/index";
 
 type Json = any;
@@ -1245,5 +1245,25 @@ describe("REQ-EVENT-021 processed records the mass that reached no fraction as r
     expect(eventOk(doc)).toBe(false);
     doc.payload.residual_kg = "12";
     expect(eventOk(doc)).toBe(false);
+  });
+});
+
+describe("REQ-SPEC-006 validateEvent checks an event against the schema, a held draft included", () => {
+  it("accepts a published event and a draft row with no signatures, and leaves the input unchanged", () => {
+    expect(validateEvent(event("weighed"))).toEqual({ valid: true, errors: [] });
+    const { signatures: _s, held: _h, "@context": _c, "@type": _t, ...row } = event("weighed");
+    const before = structuredClone(row);
+    expect(validateEvent(row)).toEqual({ valid: true, errors: [] });
+    expect(row).toEqual(before);
+  });
+
+  it("returns an error line for each violation of an invalid event", () => {
+    const { signatures: _s, held: _h, "@context": _c, "@type": _t, ...row } = event("weighed");
+    const bad = validateEvent({ ...row, event_id: "not-an-id", payload: { ...row.payload, mass_kg: "heavy" } });
+    expect(bad.valid).toBe(false);
+    expect(bad.errors.length).toBeGreaterThanOrEqual(2);
+    expect(bad.errors.join("\n")).toContain("/event_id");
+    expect(validateEvent("nope").valid).toBe(false);
+    expect(validateEvent(null).valid).toBe(false);
   });
 });

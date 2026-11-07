@@ -8,10 +8,12 @@
     ".": "./src/index.ts",
     "./schema/*": "./schema/*"
   },
+  "dependencies": {
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1"
+  },
   "devDependencies": {
     "@types/jsonld": "1.5.15",
-    "ajv": "^8.20.0",
-    "ajv-formats": "^3.0.1",
     "jsonld": "9.0.0"
   }
 }

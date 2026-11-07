@@ -9,7 +9,8 @@
   },
   "dependencies": {
     "@loopledger/ports": "workspace:*",
-    "@loopledger/spec": "workspace:*"
+    "@loopledger/spec": "workspace:*",
+    "@noble/hashes": "2.4.0"
   },
   "devDependencies": {
     "@loopledger/adapter-memory": "workspace:*"

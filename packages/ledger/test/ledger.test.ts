@@ -1,8 +1,9 @@
 import { createHash, createPrivateKey, createPublicKey } from "node:crypto";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { MemoryEventStore, MemoryEvidenceStore, MemoryKeyResolver } from "@loopledger/adapter-memory";
 import type { EventRow, EvidenceStore, LedgerMode, SignatureRow } from "@loopledger/ports";
-import { Ledger, VERIFIERS, WEBCRYPTO_VERIFIERS, canonical, detachedSignature, eventHash, jwsHeader, jwsSigningInput, merkleRoot, signEvent, signEventWebCrypto } from "../src/index";
+import { Ledger, VERIFIERS, WEBCRYPTO_VERIFIERS, canonical, detachedSignature, eventHash, jwsHeader, jwsSigningInput, merkleRoot, sha256, signEvent, signEventWebCrypto } from "../src/index";
+import { eventRow } from "../src/crypto";
 import type { EventInput } from "../src/index";
 
 const TENANT = "acme-hospitality";
@@ -484,5 +485,51 @@ describe("REQ-EVENT-017 the ledger refuses a redeploy, resale, donate or recycle
     await expect(append(ledger, disposition(2, "recycle", [line("recycle", PLYWOOD, 60, eu("R1"))]))).rejects.toThrow(/contradicts route/);
     const other = disposition(3, "recycle", [line("recycle", PLYWOOD, 60, [{ scheme: "ewc", code: "D10" }])]);
     expect(await append(ledger, other)).toEqual({ event_id: other.event_id, held: false });
+  });
+});
+
+describe("REQ-LEDGER-011 sha256 and merkleRoot give the same result in Node and the browser", () => {
+  const sample = [weighed(1), weighed(2), weighed(3)];
+  const hashOf = (bytes: Uint8Array) => createHash("sha256").update(bytes).digest();
+  const reference = (bytes: Uint8Array) => `sha256:${hashOf(bytes).toString("hex")}`;
+  const referenceRoot = (events: EventRow[]): string => {
+    const leaves = events.map((e) => hashOf(Buffer.concat([Buffer.from([0]), Buffer.from(canonical(eventRow(e)))])));
+    const tree = (l: Buffer[]): Buffer => {
+      if (l.length === 1) return l[0]!;
+      let split = 1;
+      while (split * 2 < l.length) split *= 2;
+      return hashOf(Buffer.concat([Buffer.from([1]), tree(l.slice(0, split)), tree(l.slice(split))]));
+    };
+    return `sha256:${tree(leaves).toString("hex")}`;
+  };
+
+  it("matches node:crypto for strings, bytes and the Merkle root", () => {
+    expect(sha256("")).toBe(reference(new Uint8Array()));
+    expect(sha256("loopledger ✓")).toBe(reference(new TextEncoder().encode("loopledger ✓")));
+    expect(sha256(Uint8Array.from([0, 1, 2, 255]))).toBe(reference(Uint8Array.from([0, 1, 2, 255])));
+    expect(merkleRoot(sample)).toBe(referenceRoot(sample));
+    expect(merkleRoot(sample.slice(0, 2))).toBe(referenceRoot(sample.slice(0, 2)));
+    expect(merkleRoot([])).toBe(sha256(""));
+  });
+
+  it("hashes, signs and verifies with no Buffer defined, as in a browser", async () => {
+    const seed = createHash("sha256").update("seed:sender").digest();
+    const webKey = await globalThis.crypto.subtle.importKey("pkcs8", Buffer.concat([PKCS8_ED25519, seed]), "Ed25519", false, ["sign"]);
+    const event = weighed(20);
+    const fields = { sig_id: "sig_nobuffer", key_id: "key-sender", party_id: party(1), role_at_signing: "sender", signed_at: "2026-02-02T08:00:10Z" };
+    const expectedRoot = referenceRoot(sample);
+    const expectedHash = reference(new TextEncoder().encode("x"));
+    const viaNode = signEvent(event, keys.sender.privateKey, fields);
+    vi.stubGlobal("Buffer", undefined);
+    try {
+      expect(merkleRoot(sample)).toBe(expectedRoot);
+      expect(sha256("x")).toBe(expectedHash);
+      const signed = await signEventWebCrypto(event, webKey, fields);
+      expect(signed).toEqual(viaNode);
+      const input = jwsSigningInput(event, signed);
+      expect(await WEBCRYPTO_VERIFIERS.EdDSA!(keys.sender.public_key, input, detachedSignature(signed))).toBe(true);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

@@ -174,7 +174,7 @@ export class Ledger {
     if (row.signed_hash !== eventHash(event)) refuse("signed_hash does not match the event");
     const verifier = Object.hasOwn(this.verifiers, row.alg) ? this.verifiers[row.alg] : undefined;
     if (!verifier) refuse(`unknown alg ${String(row.alg)}`);
-    let value: Buffer = Buffer.alloc(0);
+    let value: Uint8Array = new Uint8Array(0);
     try {
       value = detachedSignature(row);
     } catch (error) {

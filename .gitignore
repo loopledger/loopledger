@@ -2,3 +2,4 @@ node_modules/
 .terraform/
 *.tfstate
 *.tfstate.*
+apps/capture/dist/

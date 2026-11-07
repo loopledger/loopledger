@@ -5,9 +5,10 @@
     "moduleResolution": "bundler",
     "strict": true,
     "noUncheckedIndexedAccess": true,
+    "resolveJsonModule": true,
     "skipLibCheck": true,
     "noEmit": true,
     "types": ["node"]
   },
-  "include": ["packages", "scripts", "kit.config.ts"]
+  "include": ["packages", "apps", "scripts", "kit.config.ts"]
 }
