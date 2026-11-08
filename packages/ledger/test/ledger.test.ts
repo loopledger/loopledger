@@ -1,9 +1,9 @@
-import { createHash, createPrivateKey, createPublicKey, verify } from "node:crypto";
+import { createHash, createPrivateKey, createPublicKey, sign, verify } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 import { MemoryEventStore, MemoryEvidenceStore, MemoryKeyResolver } from "@loopledger/adapter-memory";
 import { buildCredential } from "@loopledger/spec";
 import type { EventRow, EvidenceStore, LedgerMode, SignatureRow } from "@loopledger/ports";
-import { Ledger, VERIFIERS, WEBCRYPTO_VERIFIERS, canonical, detachedSignature, eventHash, jwsHeader, jwsSigningInput, merkleRoot, sha256, signCredential, signEvent, signEventWebCrypto } from "../src/index";
+import { Ledger, VERIFIERS, WEBCRYPTO_VERIFIERS, canonical, detachedSignature, eventHash, jwsHeader, jwsSigningInput, merkleRoot, sha256, signCredential, signEvent, signEventWebCrypto, verifyCredential } from "../src/index";
 import { eventRow } from "../src/crypto";
 import type { EventInput } from "../src/index";
 
@@ -569,6 +569,65 @@ describe("REQ-SPEC-007 the issuer JWS secures the credential and leaves the even
   it("refuses a kid that is not a verification method of the issuer", () => {
     expect(() => signCredential(credential, keys.other.privateKey, "did:web:example.com#key-1")).toThrow("not a verification method of the issuer");
     expect(() => signCredential(credential, keys.other.privateKey, ISSUER)).toThrow("not a verification method of the issuer");
+  });
+});
+
+describe("REQ-LEDGER-012 verifyCredential checks the issuer JWS against a did:web document, offline", () => {
+  const ISSUER = "did:web:example.org";
+  const KID = `${ISSUER}#key-1`;
+  const credential = buildCredential("Passport", { "@context": ["https://loopledger.org/schema/v0.1/context.jsonld"], "@type": "Passport", passport_id: "psp_x" }, ISSUER, "2026-11-08T10:00:00Z");
+  const jwk = (publicKey: string) => ({ kty: "OKP", crv: "Ed25519", x: Buffer.from(publicKey, "base64").subarray(-32).toString("base64url") });
+  const doc = (over: Record<string, unknown> = {}) => ({ id: ISSUER, verificationMethod: [{ id: KID, type: "JsonWebKey", publicKeyJwk: jwk(keys.other.public_key) }], ...over });
+  const b64 = (value: unknown) => Buffer.from(typeof value === "string" ? value : canonical(value)).toString("base64url");
+  const resign = (header: Record<string, unknown>, payload: unknown = credential) => {
+    const input = `${b64(header)}.${b64(payload)}`;
+    return `${input}.${sign(null, Buffer.from(input), keys.other.privateKey).toString("base64url")}`;
+  };
+  const good = { alg: "EdDSA", cty: "vc", kid: KID, typ: "vc+jwt" };
+
+  it("returns the credential when header, kid, method and signature are all good", () => {
+    expect(verifyCredential(signCredential(credential, keys.other.privateKey, KID), doc())).toEqual(credential);
+  });
+
+  it("refuses a changed payload", () => {
+    const [h, , s] = signCredential(credential, keys.other.privateKey, KID).split(".") as [string, string, string];
+    expect(() => verifyCredential(`${h}.${b64({ ...credential, validFrom: "2030-01-01T00:00:00Z" })}.${s}`, doc())).toThrow("does not verify");
+  });
+
+  it("refuses a signature made under another key", () => {
+    const other = doc({ verificationMethod: [{ id: KID, publicKeyJwk: jwk(keys.sender.public_key) }] });
+    expect(() => verifyCredential(signCredential(credential, keys.other.privateKey, KID), other)).toThrow("does not verify");
+  });
+
+  it("refuses a kid outside the issuer", () => {
+    const foreign = "did:web:example.com#key-1";
+    const d = doc({ verificationMethod: [{ id: foreign, publicKeyJwk: jwk(keys.other.public_key) }] });
+    expect(() => verifyCredential(resign({ ...good, kid: foreign }), d)).toThrow("not a verification method of the issuer");
+  });
+
+  it("refuses a method missing from the document", () => {
+    expect(() => verifyCredential(signCredential(credential, keys.other.privateKey, KID), doc({ verificationMethod: [] }))).toThrow("not a verification method in the did:web document");
+    expect(() => verifyCredential(signCredential(credential, keys.other.privateKey, KID), { id: ISSUER })).toThrow("not a verification method in the did:web document");
+  });
+
+  it("refuses a wrong alg, typ or cty", () => {
+    expect(() => verifyCredential(resign({ ...good, alg: "Ed25519" }), doc())).toThrow("alg is not EdDSA");
+    expect(() => verifyCredential(resign({ ...good, alg: "none" }), doc())).toThrow("alg is not EdDSA");
+    expect(() => verifyCredential(resign({ ...good, typ: "JWT" }), doc())).toThrow("typ is not vc+jwt");
+    expect(() => verifyCredential(resign({ ...good, cty: "vp" }), doc())).toThrow("cty is not vc");
+  });
+
+  it("refuses a document whose id is not the issuer, and a method that is not an Ed25519 JWK", () => {
+    const jws = signCredential(credential, keys.other.privateKey, KID);
+    expect(() => verifyCredential(jws, doc({ id: "did:web:example.com" }))).toThrow("not the did:web document's id");
+    const bad = doc({ verificationMethod: [{ id: KID, publicKeyJwk: { ...jwk(keys.other.public_key), crv: "P-256" } }] });
+    expect(() => verifyCredential(jws, bad)).toThrow("not an Ed25519 publicKeyJwk");
+    expect(() => verifyCredential(jws, doc({ verificationMethod: [{ id: KID, publicKeyMultibase: "z6Mk" }] }))).toThrow("not an Ed25519 publicKeyJwk");
+  });
+
+  it("refuses a malformed JWS and a payload that is not in JCS form", () => {
+    expect(() => verifyCredential("a.b", doc())).toThrow("not a compact JWS");
+    expect(() => verifyCredential(resign(good, credential).replace(/\.[^.]+\./, `.${b64(JSON.stringify(credential, null, 1))}.`), doc())).toThrow("not the JCS");
   });
 });
 

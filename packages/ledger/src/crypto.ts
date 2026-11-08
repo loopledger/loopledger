@@ -131,6 +131,57 @@ export const signCredential = (credential: { issuer: string }, privateKey: KeyOb
 /** Verifies the signature bytes over `message` with a base64 SPKI DER public key. */
 export type Verifier = (publicKey: string, message: Uint8Array, signature: Uint8Array) => boolean | Promise<boolean>;
 
+/** The part of a did:web document `verifyCredential` reads: its `id` and its verification methods. */
+export interface DidDocument {
+  id: string;
+  verificationMethod?: readonly { id: string; type?: string; publicKeyJwk?: { kty?: string; crv?: string; x?: string } }[];
+}
+
+const ED25519_SPKI_PREFIX = Uint8Array.from([0x30, 0x2a, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x70, 0x03, 0x21, 0x00]);
+
+const parseJson = (part: string, what: string): Record<string, unknown> => {
+  try {
+    const value: unknown = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(fromB64u(part)));
+    if (value !== null && typeof value === "object" && !Array.isArray(value)) return value as Record<string, unknown>;
+  } catch {
+    // falls through to the refusal
+  }
+  throw new Error(`credential JWS ${what} is not a JSON object`);
+};
+
+/**
+ * Verifies a credential secured by `signCredential` against the issuer's did:web document, offline. Throws unless the
+ * protected header is `{alg: EdDSA, typ: vc+jwt, cty: vc}`, the payload is the JCS of a credential whose `issuer` is the
+ * document's `id`, `kid` is `<issuer>#…` and names a verification method of the document (an Ed25519 `publicKeyJwk`),
+ * and the signature over `header.payload` verifies. Returns the decoded credential. Dates and revocation are not checked.
+ */
+export const verifyCredential = (jws: string, didDocument: DidDocument): Record<string, unknown> => {
+  const parts = typeof jws === "string" ? jws.split(".") : [];
+  if (parts.length !== 3 || !parts.every((p) => B64U.test(p))) throw new Error("credential is not a compact JWS");
+  const [h, p, s] = parts as [string, string, string];
+  const header = parseJson(h, "header");
+  if (header.alg !== "EdDSA") throw new Error("credential JWS alg is not EdDSA");
+  if (header.typ !== "vc+jwt") throw new Error("credential JWS typ is not vc+jwt");
+  if (header.cty !== "vc") throw new Error("credential JWS cty is not vc");
+  const credential = parseJson(p, "payload");
+  if (p !== b64u(canonical(credential))) throw new Error("credential JWS payload is not the JCS of the credential");
+  const { issuer } = credential;
+  if (typeof issuer !== "string" || issuer !== didDocument.id) throw new Error("credential issuer is not the did:web document's id");
+  const kid = header.kid;
+  if (typeof kid !== "string" || !kid.startsWith(`${issuer}#`)) throw new Error("kid is not a verification method of the issuer");
+  const method = didDocument.verificationMethod?.find((m) => m.id === kid);
+  if (!method) throw new Error("kid is not a verification method in the did:web document");
+  const jwk = method.publicKeyJwk;
+  if (jwk?.kty !== "OKP" || jwk.crv !== "Ed25519" || typeof jwk.x !== "string" || !B64U.test(jwk.x)) {
+    throw new Error("verification method is not an Ed25519 publicKeyJwk");
+  }
+  const raw = fromB64u(jwk.x);
+  if (raw.length !== 32) throw new Error("verification method key is not 32 bytes");
+  const spki = toBase64(concatBytes(ED25519_SPKI_PREFIX, raw));
+  if (VERIFIERS.EdDSA!(spki, utf8(`${h}.${p}`), fromB64u(s)) !== true) throw new Error("credential JWS signature does not verify");
+  return credential;
+};
+
 const eddsa: Verifier = (publicKey, message, signature) => {
   const key = nodeCrypto.createPublicKey({ key: Buffer.from(publicKey, "base64"), format: "der", type: "spki" });
   return nodeCrypto.verify(null, message, key, signature);
