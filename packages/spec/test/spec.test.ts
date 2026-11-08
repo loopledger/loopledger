@@ -6,7 +6,7 @@ import Ajv2020 from "ajv/dist/2020.js";
 import addFormats from "ajv-formats";
 import jsonld from "jsonld";
 import { describe, expect, it } from "vitest";
-import { BIO_BASED_MATERIALS, EVENT_TYPES, REQUIRED_SIGNERS, catalogErrors, dispositionClassificationErrors, dispositionFamilyErrors, dispositionSeparationErrors, isBioBased, requiredSigners,signerBindingErrors, validateEvent, validateEventSet } from "../src/index";
+import { BIO_BASED_MATERIALS, EVENT_TYPES, REQUIRED_SIGNERS, UNTP_VC_PROFILE_VERSION, VC_CONTEXT_V2, VC_MEDIA_TYPE, buildCredential, catalogErrors, credentialErrors, didWebUrl, dispositionClassificationErrors, dispositionFamilyErrors, dispositionSeparationErrors, isBioBased, requiredSigners,signerBindingErrors, validateEvent, validateEventSet } from "../src/index";
 import type { EventType } from "../src/index";
 
 type Json = any;
@@ -1265,5 +1265,93 @@ describe("REQ-SPEC-006 validateEvent checks an event against the schema, a held 
     expect(bad.errors.join("\n")).toContain("/event_id");
     expect(validateEvent("nope").valid).toBe(false);
     expect(validateEvent(null).valid).toBe(false);
+  });
+});
+
+const VC = "https://www.w3.org/2018/credentials#";
+const credentialOf = (kind: "Event" | "Passport", subject: Json): Json => buildCredential(kind, subject, "did:web:example.org", "2026-11-08T10:00:00Z");
+/** The credential as the exporter publishes it: expanded with its own `@context` alone, so only the vendored files load. */
+const expandCredential = (credential: Json): Promise<Json[]> => jsonld.expand(credential, { documentLoader }) as Promise<Json[]>;
+
+describe("REQ-SPEC-007 an event exports as a VCDM 2.0 credential secured with VC-JOSE-COSE", () => {
+  it("wraps the event verbatim, with the #73 signatures still verifying inside credentialSubject", () => {
+    for (const doc of events) {
+      const credential = credentialOf("Event", doc);
+      expect(credentialErrors(credential)).toEqual([]);
+      expect(credential["@context"]).toEqual([VC_CONTEXT_V2, "https://loopledger.org/schema/v0.1/context.jsonld"]);
+      expect(credential.type).toEqual(["VerifiableCredential", "Event"]);
+      expect(credential.credentialSubject).toEqual(doc);
+      for (const s of credential.credentialSubject.signatures) expect(jwsVerifies(credential.credentialSubject, s), s.sig_id).toBe(true);
+    }
+  });
+
+  it("expands against the VC v2 context without a protected-term error, as a VerifiableCredential with the event as subject", async () => {
+    const [node] = await expandCredential(credentialOf("Event", event("removed")));
+    expect(node["@type"]).toEqual([`${VC}VerifiableCredential`, `${LL}Event`]);
+    expect(ids(node[`${VC}issuer`])).toEqual(["did:web:example.org"]);
+    expect(node[`${VC}validFrom`]).toEqual([{ "@value": "2026-11-08T10:00:00Z", "@type": "http://www.w3.org/2001/XMLSchema#dateTime" }]);
+    const [subject] = node[`${VC}credentialSubject`];
+    expect(subject[`${LL}event_type`]).toEqual([{ "@value": "removed" }]);
+  });
+
+  it("fails the protected-term check when a context redefines a VC v2 term", async () => {
+    const credential = credentialOf("Event", event("removed"));
+    credential["@context"].push({ VerifiableCredential: "https://example.com/not-the-credential" });
+    await expect(expandCredential(credential)).rejects.toThrow(/protected/i);
+  });
+
+  it("is secured as application/vc+jwt", () => {
+    expect(VC_MEDIA_TYPE).toBe("application/vc+jwt");
+  });
+
+  it("rejects a credential that is not of this shape, one line per violation", () => {
+    const good = credentialOf("Event", event("removed"));
+    expect(credentialErrors({ ...good, "@context": [VC_CONTEXT_V2] })).toHaveLength(1);
+    expect(credentialErrors({ ...good, type: ["Event"] })).toContain("type is not [VerifiableCredential, Event] or [VerifiableCredential, Passport]");
+    expect(credentialErrors({ ...good, type: ["VerifiableCredential", "Passport"] })).toHaveLength(1);
+    expect(credentialErrors({ ...good, validFrom: "yesterday" })).toHaveLength(1);
+    expect(credentialErrors({ ...good, credentialSubject: "x" })).toHaveLength(1);
+    expect(credentialErrors(null)).toEqual(["credential is not an object"]);
+  });
+});
+
+describe("REQ-SPEC-008 a passport exports as a VCDM 2.0 credential secured with VC-JOSE-COSE", () => {
+  it("wraps the passport verbatim, with its data-grant signatures still verifying", () => {
+    for (const doc of [booth, seat]) {
+      const credential = credentialOf("Passport", doc);
+      expect(credentialErrors(credential)).toEqual([]);
+      expect(credential.type).toEqual(["VerifiableCredential", "Passport"]);
+      expect(credential.credentialSubject).toEqual(doc);
+    }
+    for (const grant of booth.data_grants) for (const s of grant.signatures) expect(jwsVerifies(grant, s), s.sig_id).toBe(true);
+  });
+
+  it("expands against the VC v2 context without a protected-term error, with the passport as subject", async () => {
+    const [node] = await expandCredential(credentialOf("Passport", booth));
+    expect(node["@type"]).toEqual([`${VC}VerifiableCredential`, `${LL}Passport`]);
+    const [subject] = node[`${VC}credentialSubject`];
+    expect(ids(subject[`${LL}joints`][0][`${LL}joint_type`])).toEqual([booth.joints[0].type]);
+  });
+});
+
+describe("REQ-SPEC-009 the issuer is a did:web and the spec defines its resolution", () => {
+  it("resolves did:web:host to the well-known document and did:web:host:path to a path document", () => {
+    expect(didWebUrl("did:web:example.org")).toBe("https://example.org/.well-known/did.json");
+    expect(didWebUrl("did:web:example.org:tenants:acme")).toBe("https://example.org/tenants/acme/did.json");
+    expect(didWebUrl("did:web:example.org%3A8443")).toBe("https://example.org:8443/.well-known/did.json");
+  });
+
+  it("refuses an issuer that is not a did:web, such as an event signer's did:key", () => {
+    const key = events[0].signatures[0].key_id;
+    expect(() => didWebUrl(key)).toThrow("not a did:web");
+    expect(() => buildCredential("Event", event("removed"), key, "2026-11-08T10:00:00Z")).toThrow("not a did:web");
+    expect(credentialErrors({ ...credentialOf("Event", event("removed")), issuer: key })).toEqual(["issuer is not a did:web identifier"]);
+  });
+
+  it("documents the resolution and the pinned UNTP profile in the README", () => {
+    const readme = readFileSync(join(root, "README.md"), "utf8");
+    expect(readme).toContain("## VC-JOSE-COSE envelope");
+    expect(readme).toContain("/.well-known/did.json");
+    expect(readme).toContain(`UNTP ${UNTP_VC_PROFILE_VERSION}`);
   });
 });

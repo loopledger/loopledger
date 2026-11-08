@@ -116,6 +116,18 @@ export const signEventWebCrypto = async (
   return { ...body, signature: `${jwsHeader(alg, fields.key_id)}..${value}` };
 };
 
+/**
+ * Secures a credential (`buildCredential` in `packages/spec`) as VC-JOSE-COSE: a compact JWS whose protected header is
+ * the JCS of `{alg: EdDSA, cty: "vc", kid, typ: "vc+jwt"}`, whose payload is the JCS of the credential, and whose `kid`
+ * is a verification method of the issuer's did:web (`<issuer>#<fragment>`). This is the issuer's signature; the
+ * signatures inside the subject are the event signers' and are untouched.
+ */
+export const signCredential = (credential: { issuer: string }, privateKey: KeyObject, kid: string): string => {
+  if (!kid.startsWith(`${credential.issuer}#`)) throw new Error("kid is not a verification method of the issuer");
+  const input = `${b64u(canonical({ alg: "EdDSA", cty: "vc", kid, typ: "vc+jwt" }))}.${b64u(canonical(credential))}`;
+  return `${input}.${b64u(nodeCrypto.sign(null, utf8(input), privateKey))}`;
+};
+
 /** Verifies the signature bytes over `message` with a base64 SPKI DER public key. */
 export type Verifier = (publicKey: string, message: Uint8Array, signature: Uint8Array) => boolean | Promise<boolean>;
 

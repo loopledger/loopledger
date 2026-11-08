@@ -26,7 +26,30 @@ A signature object (`$defs/signature` in `schema/event.schema.json`, used by eve
 7. **Convenience digest.** `signed_hash` is `sha256:<hex>` of the JCS of `{"event": <subject>, "evidence_hashes": [...]}`. It is not the signed value: a verifier recomputes the payload and checks the JWS.
 8. **Key.** In the examples `key_id` is a `did:key` (multibase `z`, base58btc of the multicodec `0xed01` and the 32-byte Ed25519 public key). The example keys are derived from each `party_id` by `scripts/sign-examples.ts`, which re-signs the examples.
 
-The legacy string `Ed25519` is not an `alg`. A VC-JOSE-COSE (UNTP) envelope that wraps this signature is a follow-up.
+The legacy string `Ed25519` is not an `alg`. The VC-JOSE-COSE envelope that wraps an event or a passport is the next section.
+
+## VC-JOSE-COSE envelope
+
+An event, and the passport, export as a W3C VCDM 2.0 credential secured with VC-JOSE-COSE, read at UNTP 0.7.0 (the release that goes with the DPP 0.7.0 alignment target; only the shape of the profile is taken from it). `src/vc.ts` builds and checks the credential; `packages/ledger` signs it.
+
+```json
+{
+  "@context": ["https://www.w3.org/ns/credentials/v2", "https://loopledger.org/schema/v0.1/context.jsonld"],
+  "type": ["VerifiableCredential", "Event"],
+  "issuer": "did:web:example.org",
+  "validFrom": "2026-11-08T10:00:00Z",
+  "credentialSubject": { "…": "the event, verbatim" }
+}
+```
+
+1. **Shape.** `@context` is the VC v2 context then ours, in that order; ours redefines no protected term (REQ-SPEC-001). `type` is `["VerifiableCredential", "Event"]` or `["VerifiableCredential", "Passport"]`. `validFrom` is the export time, an RFC 3339 date-time.
+2. **Subject.** `credentialSubject` is the event or the passport exactly as stored, including its own `@context`, `@type` and `signatures`. The detached JWS signatures above are not touched and verify against the subject as they do against the bare event (REQ-EVENT-012, REQ-EVENT-013).
+3. **Securing.** A new issuer JWS secures the whole credential, media type `application/vc+jwt`: a compact JWS whose protected header is `{"alg":"EdDSA","cty":"vc","kid":<verification method>,"typ":"vc+jwt"}` and whose payload is the credential, both as JCS (RFC 8785), base64url without padding. The signature is Ed25519 over `BASE64URL(header) . BASE64URL(payload)`. This is the issuer's signature, distinct from the event signers' signatures inside the subject, which sign a different payload.
+4. **Issuer.** `issuer` is the `did:web` of the tenant exporting the credential, never an event signer, so an event with two signers still has one issuer. Which `did:web` a tenant uses is the deployment's configuration. The examples use `did:web:example.org`, which has no hosted `did.json` and no real key.
+5. **Resolution.** `did:web:host[:path…]` resolves to `https://host/[path/…]did.json`, and `did:web:host` with no path to `https://host/.well-known/did.json`; `%3A` in the host is a port. The issuer JWS `kid` is a DID URL `<issuer>#<fragment>` naming a verification method in that document; a verifier fetches the document, finds the method and uses its Ed25519 public key (`publicKeyJwk`, `crv` `Ed25519`).
+6. **Relation to `did:key`.** The event signers' `key_id` stays a `did:key` (item 8 above). The issuer key is a different key under a `did:web`: a signer's key never secures a credential, and the issuer key never signs an event.
+
+The real `did:web` domain and who holds its key are decided after the fiscal host (#9) and before any real signed event.
 
 ## EPCIS 2.0 export mapping
 

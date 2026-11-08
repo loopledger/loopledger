@@ -1,8 +1,9 @@
-import { createHash, createPrivateKey, createPublicKey } from "node:crypto";
+import { createHash, createPrivateKey, createPublicKey, verify } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 import { MemoryEventStore, MemoryEvidenceStore, MemoryKeyResolver } from "@loopledger/adapter-memory";
+import { buildCredential } from "@loopledger/spec";
 import type { EventRow, EvidenceStore, LedgerMode, SignatureRow } from "@loopledger/ports";
-import { Ledger, VERIFIERS, WEBCRYPTO_VERIFIERS, canonical, detachedSignature, eventHash, jwsHeader, jwsSigningInput, merkleRoot, sha256, signEvent, signEventWebCrypto } from "../src/index";
+import { Ledger, VERIFIERS, WEBCRYPTO_VERIFIERS, canonical, detachedSignature, eventHash, jwsHeader, jwsSigningInput, merkleRoot, sha256, signCredential, signEvent, signEventWebCrypto } from "../src/index";
 import { eventRow } from "../src/crypto";
 import type { EventInput } from "../src/index";
 
@@ -531,5 +532,58 @@ describe("REQ-LEDGER-011 sha256 and merkleRoot give the same result in Node and 
     } finally {
       vi.unstubAllGlobals();
     }
+  });
+});
+
+describe("REQ-SPEC-007 the issuer JWS secures the credential and leaves the event signatures verbatim", () => {
+  const ISSUER = "did:web:example.org";
+  const KID = `${ISSUER}#key-1`;
+  const event = { "@context": ["https://loopledger.org/schema/v0.1/context.jsonld"], "@type": "Event", ...custody() } as EventRow;
+  const signed = { ...event, signatures: [sig(event, "sender", "sender")] };
+  const credential = buildCredential("Event", signed, ISSUER, "2026-11-08T10:00:00Z");
+  const jws = signCredential(credential, keys.other.privateKey, KID);
+  const [h, p, s] = jws.split(".") as [string, string, string];
+  // An independent check, from the README alone: Ed25519 over the ASCII of `header.payload`.
+  const verifies = (token: string, publicKey: string): boolean => {
+    const [header, payload, value] = token.split(".") as [string, string, string];
+    return verify(null, Buffer.from(`${header}.${payload}`), createPublicKey({ key: Buffer.from(publicKey, "base64"), format: "der", type: "spki" }), Buffer.from(value, "base64url"));
+  };
+
+  it("carries the vc+jwt header, the credential as payload and a signature that verifies under the issuer key only", () => {
+    expect(JSON.parse(Buffer.from(h, "base64url").toString())).toEqual({ alg: "EdDSA", cty: "vc", kid: KID, typ: "vc+jwt" });
+    expect(JSON.parse(Buffer.from(p, "base64url").toString())).toEqual(credential);
+    expect(Buffer.from(p, "base64url").toString()).toBe(canonical(credential));
+    expect(verifies(jws, keys.other.public_key)).toBe(true);
+    expect(verifies(jws, keys.sender.public_key)).toBe(false);
+    const tampered = buildCredential("Event", { ...signed, payload: { note: "edited" } }, ISSUER, "2026-11-08T10:00:00Z");
+    expect(verifies(`${h}.${Buffer.from(canonical(tampered)).toString("base64url")}.${s}`, keys.other.public_key)).toBe(false);
+  });
+
+  it("keeps the event signature rows verbatim, and they still verify under the event signer's key", () => {
+    const payload = JSON.parse(Buffer.from(p, "base64url").toString());
+    const [row] = payload.credentialSubject.signatures;
+    expect(row).toEqual(signed.signatures[0]);
+    expect(VERIFIERS.EdDSA!(keys.sender.public_key, jwsSigningInput(eventRow(payload.credentialSubject), row), detachedSignature(row))).toBe(true);
+  });
+
+  it("refuses a kid that is not a verification method of the issuer", () => {
+    expect(() => signCredential(credential, keys.other.privateKey, "did:web:example.com#key-1")).toThrow("not a verification method of the issuer");
+    expect(() => signCredential(credential, keys.other.privateKey, ISSUER)).toThrow("not a verification method of the issuer");
+  });
+});
+
+describe("REQ-SPEC-008 a passport credential is secured the same way", () => {
+  it("signs a passport credential as vc+jwt under the issuer key", () => {
+    const passport = { "@context": ["https://loopledger.org/schema/v0.1/context.jsonld"], "@type": "Passport", passport_id: "psp_x" };
+    const credential = buildCredential("Passport", passport, "did:web:example.org", "2026-11-08T10:00:00Z");
+    const [h, p, s] = signCredential(credential, keys.other.privateKey, "did:web:example.org#key-1").split(".") as [string, string, string];
+    expect(JSON.parse(Buffer.from(p, "base64url").toString()).type).toEqual(["VerifiableCredential", "Passport"]);
+    expect(verify(null, Buffer.from(`${h}.${p}`), createPublicKey({ key: Buffer.from(keys.other.public_key, "base64"), format: "der", type: "spki" }), Buffer.from(s, "base64url"))).toBe(true);
+  });
+});
+
+describe("REQ-SPEC-009 the issuer is a did:web, never an event signer", () => {
+  it("refuses a credential whose issuer is not a did:web", () => {
+    expect(() => buildCredential("Event", {}, "did:key:z6Mkabc", "2026-11-08T10:00:00Z")).toThrow("not a did:web");
   });
 });
