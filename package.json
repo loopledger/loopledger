@@ -14,5 +14,5 @@
     "typescript": "^7.0.2",
     "vitest": "^5.0.5"
   },
-  "kitBumpedFrom": "0.124.0"
+  "kitBumpedFrom": "0.125.0"
 }
