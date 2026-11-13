@@ -1,0 +1,11 @@
+packages:
+  - apps/*
+  - packages/*
+  - packages/adapters/*
+allowBuilds:
+  esbuild: true
+  protobufjs: false
+minimumReleaseAge: 20160
+minimumReleaseAgeExclude:
+  - "@lemur-labs/*"
+  - "@lemur-labs/kit@0.114.0 || 0.115.0 || 0.116.1 || 0.117.0 || 0.118.0 || 0.119.0 || 0.119.1 || 0.120.0 || 0.122.0 || 0.123.0 || 0.124.0 || 0.125.0 || 0.126.0 || 0.127.0"

@@ -1,0 +1,20 @@
+{
+  "name": "@loopledger/spec",
+  "version": "0.0.0",
+  "private": true,
+  "license": "Apache-2.0 AND LicenseRef-CSL-1.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema/*": "./schema/*"
+  },
+  "dependencies": {
+    "@loopledger/ports": "workspace:*",
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1"
+  },
+  "devDependencies": {
+    "@types/jsonld": "1.5.15",
+    "jsonld": "9.0.0"
+  }
+}

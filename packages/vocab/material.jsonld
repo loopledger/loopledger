@@ -1,0 +1,23 @@
+{
+  "@context": {
+    "@vocab": "https://loopledger.org/ns/v0.1#",
+    "skos": "http://www.w3.org/2004/02/skos/core#",
+    "label": "skos:prefLabel",
+    "terms": { "@id": "skos:hasTopConcept", "@container": "@set" }
+  },
+  "@id": "https://loopledger.org/vocab/material/v0.1",
+  "@type": "skos:ConceptScheme",
+  "$comment": "Community Specification License 1.0 (LL-002). Changed only through the RFC process (GOVERNANCE.md); a change is a new version. Every term is a draft. external_refs holds bSDD classes from NAAKT 2.5 (https://identifier.buildingsmart.org/uri/nkt/naakt/2.5/class/); [\"none\"] means NAAKT has no matching class (#56).",
+  "scheme": "material",
+  "version": "0.1",
+  "terms": [
+    { "@id": "https://loopledger.org/vocab/material/wood", "term_id": "wood", "scheme": "material", "label": "Wood", "external_refs": ["https://identifier.buildingsmart.org/uri/nkt/naakt/2.5/class/hout_generiek_generiek"], "status": "draft" },
+    { "@id": "https://loopledger.org/vocab/material/plywood", "term_id": "plywood", "scheme": "material", "label": "Plywood", "external_refs": ["https://identifier.buildingsmart.org/uri/nkt/naakt/2.5/class/hout_multiplex_generiek"], "status": "draft" },
+    { "@id": "https://loopledger.org/vocab/material/steel", "term_id": "steel", "scheme": "material", "label": "Steel", "external_refs": ["https://identifier.buildingsmart.org/uri/nkt/naakt/2.5/class/metaal_staal_generiek"], "status": "draft" },
+    { "@id": "https://loopledger.org/vocab/material/aluminium", "term_id": "aluminium", "scheme": "material", "label": "Aluminium", "external_refs": ["https://identifier.buildingsmart.org/uri/nkt/naakt/2.5/class/metaal_aluminium_generiek"], "status": "draft" },
+    { "@id": "https://loopledger.org/vocab/material/foam", "term_id": "foam", "scheme": "material", "label": "Foam", "external_refs": ["none"], "status": "draft" },
+    { "@id": "https://loopledger.org/vocab/material/textile", "term_id": "textile", "scheme": "material", "label": "Textile", "external_refs": ["none"], "status": "draft" },
+    { "@id": "https://loopledger.org/vocab/material/plastic", "term_id": "plastic", "scheme": "material", "label": "Plastic", "external_refs": ["https://identifier.buildingsmart.org/uri/nkt/naakt/2.5/class/kunststof_generiek_generiek"], "status": "draft" },
+    { "@id": "https://loopledger.org/vocab/material/vinyl", "term_id": "vinyl", "scheme": "material", "label": "Vinyl", "external_refs": ["https://identifier.buildingsmart.org/uri/nkt/naakt/2.5/class/kunststof_pvc_generiek"], "status": "draft" }
+  ]
+}

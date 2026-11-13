@@ -1,0 +1,229 @@
+[
+  {
+    "@context": ["https://loopledger.org/schema/v0.1/context.jsonld"],
+    "@type": "Event",
+    "event_id": "evt_01JC8K2M4N6P8R0T2V4X6Z8B01",
+    "tenant_id": "acme-hospitality",
+    "site_id": "SITE1",
+    "asset_ids": ["ast_01JC8K2M4N6P8R0T2V4X6Z8A01"],
+    "event_type": "asset_born",
+    "occurred_at": "2019-03-14T08:00:00Z",
+    "recorded_at": "2026-02-02T08:00:00Z",
+    "payload": {
+      "source": "procurement",
+      "catalog_ref": { "manufacturer": { "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P08" }, "model_reference": "BTH-2S", "article_number": "BTH-2S-G4", "gtin": "09506000134352", "version": 2 },
+      "revision": { "basis": "declared", "label": "G4" },
+      "origin": { "site_id": "SITE1", "installed_on": "2019-03-14", "source_event": "evt_01JC8K2M4N6P8R0T2V4X6Z8B01" }
+    },
+    "held": false,
+    "signatures": [
+      { "sig_id": "sig_01", "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P07", "key_id": "did:key:z6MkqLCRrz68dJhmX6oKqcKDB64YT9SmA3tf1LGFu49FBJbs", "alg": "EdDSA", "signed_hash": "sha256:ec419850bc73a189489aca99431a2262905f1d247b81b9a4832074e82786c488", "signed_at": "2026-02-02T08:00:01Z", "role_at_signing": "adapter", "signature": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa3FMQ1JyejY4ZEpobVg2b0txY0tEQjY0WVQ5U21BM3RmMUxHRnU0OUZCSmJzIn0..zkW7l_OmKqPiiLWflt5N_UdOKLqTiNhR_EJ4wJJZ4huRQTqUspk1XNQ-ZOlmVWbP_cS5HG0ZDevTsKNdnXmOBg" }
+    ]
+  },
+  {
+    "@context": ["https://loopledger.org/schema/v0.1/context.jsonld"],
+    "@type": "Event",
+    "event_id": "evt_01JC8K2M4N6P8R0T2V4X6Z8B02",
+    "tenant_id": "acme-hospitality",
+    "site_id": "SITE1",
+    "asset_ids": ["ast_01JC8K2M4N6P8R0T2V4X6Z8A01"],
+    "event_type": "carrier_attached",
+    "occurred_at": "2026-02-02T09:00:00Z",
+    "recorded_at": "2026-02-02T09:00:05Z",
+    "payload": {
+      "carrier": {
+        "kind": "qr",
+        "identifier": "(01)09506000134352(21)BTH2S000101",
+        "digital_link": "https://id.example.com/01/09506000134352/21/BTH2S000101",
+        "position": "underside of seat, left"
+      }
+    },
+    "held": false,
+    "signatures": [
+      { "sig_id": "sig_02", "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P01", "key_id": "did:key:z6Mkgfv76Qix9QTv6JA5bj8tW8MVbbPrjoAm24aYm29XASg1", "alg": "EdDSA", "signed_hash": "sha256:e0089683efb9e0c37410c595d7aa7aefcc6ae98f8f61d37ee131863d922bf194", "signed_at": "2026-02-02T09:00:06Z", "role_at_signing": "operator", "signature": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa2dmdjc2UWl4OVFUdjZKQTViajh0VzhNVmJiUHJqb0FtMjRhWW0yOVhBU2cxIn0..LIWfnvIUj5JqlY0XQeV3ysJ-X7vivD_hiuPbKvdbox2v4s6ike6b4-kxcvgFnkNJWJ8FFiQ8BQRIpNA79UCBBA" }
+    ]
+  },
+  {
+    "@context": ["https://loopledger.org/schema/v0.1/context.jsonld"],
+    "@type": "Event",
+    "event_id": "evt_01JC8K2M4N6P8R0T2V4X6Z8B03",
+    "tenant_id": "acme-hospitality",
+    "site_id": "SITE1",
+    "asset_ids": ["ast_01JC8K2M4N6P8R0T2V4X6Z8A01"],
+    "event_type": "record_transferred",
+    "occurred_at": "2026-03-01T12:00:00Z",
+    "recorded_at": "2026-03-01T12:05:00Z",
+    "payload": {
+      "from_owner_party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P01",
+      "to_owner_party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P04",
+      "access": "full",
+      "resolver_delegation": "https://id.example.com/01/09506000134352/21/BTH2S000101"
+    },
+    "held": false,
+    "signatures": [
+      { "sig_id": "sig_03a", "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P01", "key_id": "did:key:z6Mkgfv76Qix9QTv6JA5bj8tW8MVbbPrjoAm24aYm29XASg1", "alg": "EdDSA", "signed_hash": "sha256:78b2135d3c93a5f592ace18e7b875de161680f403cbc9cce87ff63f91642b489", "signed_at": "2026-03-01T12:01:00Z", "role_at_signing": "transferring_owner", "signature": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa2dmdjc2UWl4OVFUdjZKQTViajh0VzhNVmJiUHJqb0FtMjRhWW0yOVhBU2cxIn0..vuUxpZ4GlvQbrwO9QvoUcw11K4IyQrXyRpbYVEwK9R9LCPlKLQULIKBalXdufxMyo2mCDEXLWgQd-KQj_zGaDg" },
+      { "sig_id": "sig_03b", "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P04", "key_id": "did:key:z6MkokCSMdqFhKi8xDQ8tYdLvBTKqiWrpb1a6TEHx5UQhQtb", "alg": "EdDSA", "signed_hash": "sha256:78b2135d3c93a5f592ace18e7b875de161680f403cbc9cce87ff63f91642b489", "signed_at": "2026-03-01T12:02:00Z", "role_at_signing": "receiving_owner", "signature": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa29rQ1NNZHFGaEtpOHhEUTh0WWRMdkJUS3FpV3JwYjFhNlRFSHg1VVFoUXRiIn0..CBzOUcSFmQ1S1bz_Rz7-qz9otoDbBvPVEA4EKX-vQ9DP9iLQ-rSM7rkNGefmfU0c7EXQ2D8uTR3p26YOtostDw" }
+    ]
+  },
+  {
+    "@context": ["https://loopledger.org/schema/v0.1/context.jsonld"],
+    "@type": "Event",
+    "event_id": "evt_01JC8K2M4N6P8R0T2V4X6Z8B04",
+    "tenant_id": "acme-hospitality",
+    "asset_ids": ["ast_01JC8K2M4N6P8R0T2V4X6Z8A01"],
+    "event_type": "maintained",
+    "occurred_at": "2026-06-10T10:00:00Z",
+    "recorded_at": "2026-06-10T10:30:00Z",
+    "payload": {
+      "operation": "part_replaced",
+      "components_touched": ["back"],
+      "joints_touched": ["j-2"],
+      "parts_consumed": ["M8 bolt x4"],
+      "labor_min": 25,
+      "crew_size": 1
+    },
+    "held": false,
+    "signatures": [
+      { "sig_id": "sig_04", "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P10", "key_id": "did:key:z6Mkqcf5WVxdSPzqQCaK6gNF7e6eTnpg92RzQLBG7dr9z5qu", "alg": "EdDSA", "signed_hash": "sha256:a14e086eeb53467c9181742a9ff88b94ee3da36982b5cb861862262b87d6b099", "signed_at": "2026-06-10T10:31:00Z", "role_at_signing": "maintainer", "signature": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa3FjZjVXVnhkU1B6cVFDYUs2Z05GN2U2ZVRucGc5MlJ6UUxCRzdkcjl6NXF1In0..AaEpIDMND5jCFbP33JDq97cdCIuN7_vWRAbYOQUTHedaxJhNgoi0SKBdfaSBURD7N5xP5IRjCSYd9SKW1sdIBw" }
+    ]
+  },
+  {
+    "@context": ["https://loopledger.org/schema/v0.1/context.jsonld"],
+    "@type": "Event",
+    "event_id": "evt_01JC8K2M4N6P8R0T2V4X6Z8B05",
+    "tenant_id": "acme-hospitality",
+    "recovery_event_id": "rec-2026-09-site1",
+    "site_id": "SITE1",
+    "asset_ids": ["ast_01JC8K2M4N6P8R0T2V4X6Z8A01"],
+    "event_type": "removed",
+    "occurred_at": "2026-09-20T14:00:00Z",
+    "recorded_at": "2026-09-20T15:00:00Z",
+    "payload": {
+      "cluster": "dining-room-north",
+      "method": "intact",
+      "condition_at_removal": "B",
+      "started_at": "2026-09-20T14:00:00Z",
+      "ended_at": "2026-09-20T14:45:00Z",
+      "crew_size": 3,
+      "joints_opened": [
+        { "joint_id": "j-1", "joint_type": "https://loopledger.org/vocab/joint_type/bolted", "catalog_ref": { "manufacturer": { "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P08" }, "model_reference": "BTH-2S", "version": 2 }, "outcome": "clean", "labor_min": 12 },
+        { "joint_id": "j-2", "joint_type": "https://loopledger.org/vocab/joint_type/bolted", "catalog_ref": { "manufacturer": { "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P08" }, "model_reference": "BTH-2S", "version": 2 }, "outcome": "clean", "labor_min": 12 },
+        { "joint_id": "j-3", "joint_type": "https://loopledger.org/vocab/joint_type/bonded", "catalog_ref": { "manufacturer": { "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P08" }, "model_reference": "BTH-2S", "version": 2 }, "outcome": "damaged", "labor_min": 40 }
+      ],
+      "cause": { "term": "https://loopledger.org/vocab/cause/bonded_joint", "design_addressable": true }
+    },
+    "held": false,
+    "signatures": [
+      { "sig_id": "sig_05a", "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P02", "key_id": "did:key:z6Mkhwgn4KSSWGr4w93NQTaxdvvkk4i5L5DEvs4y4tDj4FA8", "alg": "EdDSA", "signed_hash": "sha256:1818e4555f389757e2abff13b32926cec3c3629441bfb39c803440212d72ce75", "signed_at": "2026-09-20T15:01:00Z", "role_at_signing": "crew", "signature": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa2h3Z240S1NTV0dyNHc5M05RVGF4ZHZ2a2s0aTVMNURFdnM0eTR0RGo0RkE4In0..ixYiiR3-CAA_YvY3m5iaZZ8bhJ-0u6vsRs2i2DEQQT_piqU11SUDmrabodQUGrpK4l97ZJ5Xz7Rzqm04JrFvAQ" },
+      { "sig_id": "sig_05b", "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P04", "key_id": "did:key:z6MkokCSMdqFhKi8xDQ8tYdLvBTKqiWrpb1a6TEHx5UQhQtb", "alg": "EdDSA", "signed_hash": "sha256:1818e4555f389757e2abff13b32926cec3c3629441bfb39c803440212d72ce75", "signed_at": "2026-09-20T15:02:00Z", "role_at_signing": "operator", "signature": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa29rQ1NNZHFGaEtpOHhEUTh0WWRMdkJUS3FpV3JwYjFhNlRFSHg1VVFoUXRiIn0..Rlgvb3U88boam-l6nitkzaQGzKTNywHaj5ZW0HnSmx9amn4lDZaYrsJXn7yH0YhNqkkH9FPe-KaZ0pE4D4K0AA" }
+    ],
+    "evidence": [
+      { "evidence_id": "ev-photo-j3", "kind": "photo", "content_hash": "sha256:a1b2c3d4e5f60718a1b2c3d4e5f60718a1b2c3d4e5f60718a1b2c3d4e5f60718", "storage_ref": "cas://a1b2c3d4e5f60718", "captured_by": "pty_01JC8K2M4N6P8R0T2V4X6Z8P02", "redactions": ["faces"] }
+    ]
+  },
+  {
+    "@context": ["https://loopledger.org/schema/v0.1/context.jsonld"],
+    "@type": "Event",
+    "event_id": "evt_01JC8K2M4N6P8R0T2V4X6Z8B06",
+    "tenant_id": "acme-hospitality",
+    "recovery_event_id": "rec-2026-09-site1",
+    "asset_ids": ["ast_01JC8K2M4N6P8R0T2V4X6Z8A01"],
+    "event_type": "custody_transferred",
+    "occurred_at": "2026-09-20T16:00:00Z",
+    "recorded_at": "2026-09-20T16:05:00Z",
+    "payload": {
+      "from_party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P04",
+      "to_party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P03",
+      "mode": "signed",
+      "vehicle": "truck-12"
+    },
+    "held": false,
+    "signatures": [
+      { "sig_id": "sig_06a", "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P04", "key_id": "did:key:z6MkokCSMdqFhKi8xDQ8tYdLvBTKqiWrpb1a6TEHx5UQhQtb", "alg": "EdDSA", "signed_hash": "sha256:d9b859d7b037bfb7c3f858e5b97421967972d59895fb99aacea4a432b376b46f", "signed_at": "2026-09-20T16:01:00Z", "role_at_signing": "sender", "signature": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa29rQ1NNZHFGaEtpOHhEUTh0WWRMdkJUS3FpV3JwYjFhNlRFSHg1VVFoUXRiIn0..sKhZTecjQY4V8nPmljM3YXGUahIgfb2QFflo4LLCs7K_M4gu3_s4FGCJH-7rhAsvbHaRQEmOybUd2JqnBqScDw" },
+      { "sig_id": "sig_06b", "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P03", "key_id": "did:key:z6Mkn7XK2aBCMTgPRLvYDYfYXsmi2Dssm2oBHcoYJVcZzLD3", "alg": "EdDSA", "signed_hash": "sha256:d9b859d7b037bfb7c3f858e5b97421967972d59895fb99aacea4a432b376b46f", "signed_at": "2026-09-20T16:02:00Z", "role_at_signing": "receiver", "signature": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa243WEsyYUJDTVRnUFJMdllEWWZZWHNtaTJEc3NtMm9CSGNvWUpWY1p6TEQzIn0..zGdcwoAZyfsfPN9tzBCcLqSgie9YEBb9EfDfHz7PmIBck3M_gZCQc7Js7RzHa-QZUou0vmZYnOJPBEBhGPXrBQ" }
+    ]
+  },
+  {
+    "@context": ["https://loopledger.org/schema/v0.1/context.jsonld"],
+    "@type": "Event",
+    "event_id": "evt_01JC8K2M4N6P8R0T2V4X6Z8B07",
+    "tenant_id": "acme-hospitality",
+    "asset_ids": ["ast_01JC8K2M4N6P8R0T2V4X6Z8A01"],
+    "event_type": "weighed",
+    "occurred_at": "2026-09-21T08:00:00Z",
+    "recorded_at": "2026-09-21T08:00:30Z",
+    "payload": { "mass_kg": 218, "tare_kg": 0, "uncertainty": { "value_kg": 0.2, "basis": "scale accuracy class, k=2" }, "scale_id": "scale-hub1-a", "certification_id": "NTEP-2026-0042" },
+    "held": false,
+    "signatures": [
+      { "sig_id": "sig_07", "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P06", "key_id": "did:key:z6MksdvwwmoMKip64VTXTLrsMf6jpBCrKZ41GgCVdpFE2kuC", "alg": "EdDSA", "signed_hash": "sha256:5e9a692c04dc6450978f90976ed2da647130fc1079f80fd547cadd547b4419b2", "signed_at": "2026-09-21T08:00:31Z", "role_at_signing": "scale", "signature": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa3Nkdnd3bW9NS2lwNjRWVFhUTHJzTWY2anBCQ3JLWjQxR2dDVmRwRkUya3VDIn0.._0kf5CZVbHzt_CVqdHRS0LJ1LXU0C2GcxIoW8RFcqoMYkNcpgFAgrQzAd6pvQ7ePBI8cZFPDZYo0WfSO-TXhBg" }
+    ]
+  },
+  {
+    "@context": ["https://loopledger.org/schema/v0.1/context.jsonld"],
+    "@type": "Event",
+    "event_id": "evt_01JC8K2M4N6P8R0T2V4X6Z8B08",
+    "tenant_id": "acme-hospitality",
+    "site_id": "HUB1",
+    "asset_ids": ["ast_01JC8K2M4N6P8R0T2V4X6Z8A01"],
+    "event_type": "processed",
+    "occurred_at": "2026-09-22T09:00:00Z",
+    "recorded_at": "2026-09-22T11:00:00Z",
+    "payload": {
+      "operation": "separate",
+      "before_refs": ["ev-photo-before"],
+      "after_refs": ["ev-photo-after"],
+      "labor_min": 55,
+      "crew_size": 2,
+      "joints_opened": [
+        { "joint_id": "j-4", "joint_type": "https://loopledger.org/vocab/joint_type/bonded", "catalog_ref": { "manufacturer": { "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P08" }, "model_reference": "BTH-2S", "version": 2 }, "outcome": "destroyed", "labor_min": 30 }
+      ],
+      "fractions": [{ "material": "https://loopledger.org/vocab/material/plywood", "mass_kg": 66.9, "lot": "ast_01JC8K2M4N6P8R0T2V4X6Z8A02", "weighed_event": "evt_01JC8K2M4N6P8R0T2V4X6Z8B09" }],
+      "child_asset_ids": ["ast_01JC8K2M4N6P8R0T2V4X6Z8A02"]
+    },
+    "held": false,
+    "signatures": [
+      { "sig_id": "sig_08", "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P05", "key_id": "did:key:z6MkoJ9Y5aLKX8xUHSiU1qF17Dwb8VqvRAn5737M3CXuAUix", "alg": "EdDSA", "signed_hash": "sha256:b119af8bafefd1809ef8699d881ac3e29f4b1f04bc1fe1c7ce2ab78a460afd5f", "signed_at": "2026-09-22T11:01:00Z", "role_at_signing": "facility", "signature": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa29KOVk1YUxLWDh4VUhTaVUxcUYxN0R3YjhWcXZSQW41NzM3TTNDWHVBVWl4In0..mlezzp2rU_o8GwMyYUqXnF4qaNJ0r1kFY-VNfVy1YR4aSwbfuemGsQix84agSVs7GddoEUCa6oRsrUTPE--kDw" }
+    ],
+    "evidence": [
+      { "evidence_id": "ev-photo-before", "kind": "photo", "content_hash": "sha256:a1b2c3d4e5f60718a1b2c3d4e5f60718a1b2c3d4e5f60718a1b2c3d4e5f60718", "storage_ref": "cas://b1b2c3d4e5f60718" },
+      { "evidence_id": "ev-photo-after", "kind": "photo", "content_hash": "sha256:b1b2c3d4e5f60718a1b2c3d4e5f60718a1b2c3d4e5f60718a1b2c3d4e5f60718", "storage_ref": "cas://c1b2c3d4e5f60718" }
+    ]
+  },
+  {
+    "@context": ["https://loopledger.org/schema/v0.1/context.jsonld"],
+    "@type": "Event",
+    "event_id": "evt_01JC8K2M4N6P8R0T2V4X6Z8B09",
+    "tenant_id": "acme-hospitality",
+    "asset_ids": ["ast_01JC8K2M4N6P8R0T2V4X6Z8A02"],
+    "event_type": "weighed",
+    "occurred_at": "2026-09-22T10:30:00Z",
+    "recorded_at": "2026-09-22T10:30:20Z",
+    "payload": { "mass_kg": 66.9, "tare_kg": 1.5, "uncertainty": { "value_kg": 0.05, "basis": "scale accuracy class, k=2" }, "moisture_basis": { "moisture_pct": 11, "state": "as_received" }, "scale_id": "scale-hub1-a", "certification_id": "NTEP-2026-0042" },
+    "held": false,
+    "signatures": [
+      { "sig_id": "sig_09", "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P06", "key_id": "did:key:z6MksdvwwmoMKip64VTXTLrsMf6jpBCrKZ41GgCVdpFE2kuC", "alg": "EdDSA", "signed_hash": "sha256:8be7eaf457619d67cee147d32e62c17a731687e0e95074da54f818a0a187c837", "signed_at": "2026-09-22T10:30:21Z", "role_at_signing": "scale", "signature": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa3Nkdnd3bW9NS2lwNjRWVFhUTHJzTWY2anBCQ3JLWjQxR2dDVmRwRkUya3VDIn0..ewlC2B-HSq2284RowMfR9-fuPzC5M213QGw20Hf4QTl9ZnKNfbP2TPJhJcX3Hzd-9dGpxIHxCft3acr4NZwWBA" }
+    ]
+  },
+  {
+    "@context": ["https://loopledger.org/schema/v0.1/context.jsonld"],
+    "@type": "Event",
+    "event_id": "evt_01JC8K2M4N6P8R0T2V4X6Z8B10",
+    "tenant_id": "acme-hospitality",
+    "asset_ids": ["ast_01JC8K2M4N6P8R0T2V4X6Z8A02"],
+    "event_type": "disposition_final",
+    "occurred_at": "2026-09-25T10:00:00Z",
+    "recorded_at": "2026-09-25T10:10:00Z",
+    "payload": {
+      "family": "recycle",
+      "lines": [
+        { "material": "https://loopledger.org/vocab/material/plywood", "mass_kg": 66.9, "route": "recycle", "classification": [{ "scheme": "eu-wfd-2008-98", "code": "R3" }], "facility_party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P03", "end_of_waste": true }
+      ],
+      "receiver_doc_refs": ["manifest-hub1-0925"]
+    },
+    "held": false,
+    "signatures": [
+      { "sig_id": "sig_10a", "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P03", "key_id": "did:key:z6Mkn7XK2aBCMTgPRLvYDYfYXsmi2Dssm2oBHcoYJVcZzLD3", "alg": "EdDSA", "signed_hash": "sha256:f431f96e44baeabad7053057604d96097c72070bee71394235addf583c324e07", "signed_at": "2026-09-25T10:11:00Z", "role_at_signing": "receiver", "signature": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa243WEsyYUJDTVRnUFJMdllEWWZZWHNtaTJEc3NtMm9CSGNvWUpWY1p6TEQzIn0..iBiQOc-2dLMN8XkJ_ATCqw3JXNa4iiFW0w65kwaK_bcVTTP8FjAPbzTI78Rt19hoYoh7pKVZ3epHqkDKinVIDw" },
+      { "sig_id": "sig_10b", "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P04", "key_id": "did:key:z6MkokCSMdqFhKi8xDQ8tYdLvBTKqiWrpb1a6TEHx5UQhQtb", "alg": "EdDSA", "signed_hash": "sha256:f431f96e44baeabad7053057604d96097c72070bee71394235addf583c324e07", "signed_at": "2026-09-25T10:12:00Z", "role_at_signing": "operator", "signature": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa29rQ1NNZHFGaEtpOHhEUTh0WWRMdkJUS3FpV3JwYjFhNlRFSHg1VVFoUXRiIn0..JfbWuhglDtkbDDCrCjOyPZqs-IuULXfr4RbPytaiNh9ZLzEcPFqN0LyaBh8i0pP7_BP_a90Y985SqKvOqqx5Bw" }
+    ]
+  }
+]

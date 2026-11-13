@@ -1,0 +1,10 @@
+{
+  "name": "@loopledger/corpus",
+  "version": "0.0.0",
+  "private": true,
+  "license": "Apache-2.0 AND LicenseRef-CDLA-Permissive-2.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

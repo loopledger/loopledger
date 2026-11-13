@@ -1,0 +1,18 @@
+{
+  "name": "loopledger",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.13.0",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5"
+  },
+  "kitBumpedFrom": "0.126.0"
+}

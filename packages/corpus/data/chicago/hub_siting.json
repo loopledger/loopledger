@@ -1,0 +1,12 @@
+[
+  {
+    "jurisdiction": "Chicago",
+    "category": "hub_siting",
+    "rule": "Recovery hubs carry zoning, fire-storage and stormwater constraints. The Chicago provisions are not yet sourced.",
+    "effective_from": null,
+    "pinpoint_citation": null,
+    "confidence": "low",
+    "extracted_by": "claude-sonnet-5-5",
+    "status": "draft"
+  }
+]
