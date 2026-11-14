@@ -9,6 +9,7 @@
     "./schema/*": "./schema/*"
   },
   "dependencies": {
+    "@loopledger/ports": "workspace:*",
     "ajv": "8.20.0",
     "ajv-formats": "3.0.1"
   },

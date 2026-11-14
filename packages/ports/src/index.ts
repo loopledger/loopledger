@@ -78,3 +78,31 @@ export interface KeyRecord {
 export interface KeyResolver {
   resolve(keyId: string): Promise<KeyRecord | undefined>;
 }
+
+/** The passport document (schema/passport.schema.json): identity, revision, carrier, owner and origin. */
+export interface Passport {
+  "@context": unknown[];
+  "@type": "Passport";
+  asset_id: string;
+  passport_id: string;
+  tenant_id: string;
+  kind: "unit" | "lot";
+  revision: { basis: "declared" | "observed" | "unknown"; label?: string };
+  owner: { party_id: string; name?: string; record_access: "full" | "append_observations" | "read_only" };
+  origin: { site_id: string; installed_on?: string; source_event: string };
+  [field: string]: unknown;
+}
+
+export interface PassportStore {
+  readonly mode: LedgerMode;
+  /** Throws when the asset already has a passport. */
+  put(passport: Passport): Promise<void>;
+  get(assetId: string): Promise<Passport | undefined>;
+  /** Every passport of the tenant, in the order it was stored. */
+  list(tenantId: string): Promise<Passport[]>;
+}
+
+export interface KeyRegistry extends KeyResolver {
+  /** Adds a key; throws when the `key_id` is already registered. */
+  register(record: KeyRecord): Promise<void>;
+}

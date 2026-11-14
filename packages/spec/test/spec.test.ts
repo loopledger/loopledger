@@ -6,7 +6,7 @@ import Ajv2020 from "ajv/dist/2020.js";
 import addFormats from "ajv-formats";
 import jsonld from "jsonld";
 import { describe, expect, it } from "vitest";
-import { BIO_BASED_MATERIALS, EVENT_TYPES, REQUIRED_SIGNERS, UNTP_VC_PROFILE_VERSION, VC_CONTEXT_V2, VC_MEDIA_TYPE, buildCredential, catalogErrors, credentialErrors, didWebUrl, dispositionClassificationErrors, dispositionFamilyErrors, dispositionSeparationErrors, isBioBased, requiredSigners,signerBindingErrors, validateEvent, validateEventSet } from "../src/index";
+import { BIO_BASED_MATERIALS, EVENT_TYPES, REQUIRED_SIGNERS, UNTP_VC_PROFILE_VERSION, VC_CONTEXT_V2, VC_MEDIA_TYPE, buildCredential, catalogErrors, credentialErrors, didWebUrl, dispositionClassificationErrors, dispositionFamilyErrors, dispositionSeparationErrors, isBioBased, isId, newId, requiredSigners,signerBindingErrors, validateEvent, validateEventSet, validatePassport } from "../src/index";
 import type { EventType } from "../src/index";
 
 type Json = any;
@@ -1355,3 +1355,49 @@ describe("REQ-SPEC-009 the issuer is a did:web and the spec defines its resoluti
     expect(readme).toContain(`UNTP ${UNTP_VC_PROFILE_VERSION}`);
   });
 });
+
+describe("REQ-SPEC-010 validatePassport checks a passport against the schema", () => {
+  it("accepts a published passport and returns no errors", () => {
+    const result = validatePassport(booth);
+    expect(result.valid).toBe(true);
+    expect(result.errors).toEqual([]);
+  });
+
+  it("returns one <path> <message> line per violation", () => {
+    const bad = copy(booth);
+    delete bad.passport_id;
+    bad.asset_id = "ast_123";
+    const result = validatePassport(bad);
+    expect(result.valid).toBe(false);
+    expect(result.errors).toHaveLength(2);
+    expect(result.errors).toContain("/ must have required property 'passport_id'");
+    expect(result.errors.find((e) => e.startsWith("/asset_id"))).toMatch(/must match pattern/);
+  });
+
+  it("rejects a non-object and accepts the mode argument without a mode-dependent rule yet", () => {
+    expect(validatePassport("booth").valid).toBe(false);
+    expect(validatePassport(booth, "evidence").valid).toBe(true);
+    expect(validatePassport(booth, "pilot").valid).toBe(true);
+  });
+});
+
+describe("REQ-SPEC-011 ids are a prefix and a 26-character Crockford ULID", () => {
+  it("mints one for each prefix, unique on repeated calls", () => {
+    for (const prefix of ["evt", "ast", "sig"] as const) {
+      const id = newId(prefix, 1794566400000);
+      expect(id).toMatch(new RegExp(`^${prefix}_[0-9A-HJKMNP-TV-Z]{26}$`));
+      expect(isId(id, prefix)).toBe(true);
+      expect(isId(newId(prefix), prefix)).toBe(true);
+    }
+  });
+
+  it("verifies the shape and refuses another prefix, a wrong prefix, or a bad body", () => {
+    expect(isId("evt_01JDPC0000000000000000AAAA")).toBe(true);
+    expect(isId("evt_01JDPC0000000000000000AAAA", "ast")).toBe(false);
+    expect(isId("evd_01JDPC0000000000000000AAAA")).toBe(false);
+    expect(isId("evt_01JDPC0000000000000000AAAI")).toBe(false); // I is not a Crockford digit
+    expect(isId("evt_short")).toBe(false);
+    expect(isId("01JDPC0000000000000000AAAA")).toBe(false);
+  });
+});
+

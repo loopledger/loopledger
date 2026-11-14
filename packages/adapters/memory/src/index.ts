@@ -1,6 +1,6 @@
 // In-memory adapters for the ledger ports. They back tests and the drill (LL-001).
 import { createHash } from "node:crypto";
-import type { EventRow, EventStore, EvidenceStore, KeyRecord, KeyResolver, LedgerMode, SignatureRow } from "@loopledger/ports";
+import type { EventRow, EventStore, EvidenceStore, KeyRecord, KeyRegistry, KeyResolver, LedgerMode, Passport, PassportStore, SignatureRow } from "@loopledger/ports";
 
 export class MemoryEventStore implements EventStore {
   private readonly events = new Map<string, EventRow>();
@@ -79,5 +79,38 @@ export class MemoryKeyResolver implements KeyResolver {
   async resolve(keyId: string): Promise<KeyRecord | undefined> {
     const record = this.keys.get(keyId);
     return record && { ...record };
+  }
+}
+
+export class MemoryPassportStore implements PassportStore {
+  private readonly passports = new Map<string, Passport>();
+
+  constructor(readonly mode: LedgerMode = "evidence") {}
+
+  /** Drops every passport; pilot passports are test data too (REQ-LEDGER-010). */
+  discard(): void {
+    if (this.mode !== "pilot") throw new Error("only a pilot store can be discarded");
+    this.passports.clear();
+  }
+
+  async put(passport: Passport): Promise<void> {
+    if (this.passports.has(passport.asset_id)) throw new Error(`asset ${passport.asset_id} already has a passport`);
+    this.passports.set(passport.asset_id, structuredClone(passport));
+  }
+
+  async get(assetId: string): Promise<Passport | undefined> {
+    const passport = this.passports.get(assetId);
+    return passport && structuredClone(passport);
+  }
+
+  async list(tenantId: string): Promise<Passport[]> {
+    return [...this.passports.values()].filter((p) => p.tenant_id === tenantId).map((p) => structuredClone(p));
+  }
+}
+
+export class MemoryKeyRegistry extends MemoryKeyResolver implements KeyRegistry {
+  async register(record: KeyRecord): Promise<void> {
+    // The resolver's register already refuses a repeat key_id; the async wrapper is the port's shape.
+    super.register(record);
   }
 }
