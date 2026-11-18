@@ -10,5 +10,6 @@
     "noEmit": true,
     "types": ["node"]
   },
-  "include": ["packages", "apps", "scripts", "kit.config.ts"]
+  "include": ["packages", "apps", "scripts", "kit.config.ts"],
+  "exclude": ["apps/field"]
 }
