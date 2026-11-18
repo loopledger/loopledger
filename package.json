@@ -5,7 +5,8 @@
   "packageManager": "pnpm@11.13.0",
   "scripts": {
     "test": "vitest run",
-    "typecheck": "tsc"
+    "typecheck": "tsc",
+    "validate": "tsx packages/spec/src/cli.ts"
   },
   "dependencies": {},
   "devDependencies": {

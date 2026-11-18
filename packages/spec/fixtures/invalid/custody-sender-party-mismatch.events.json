@@ -1,0 +1,46 @@
+[
+  {
+    "@context": [
+      "https://loopledger.org/schema/v0.1/context.jsonld"
+    ],
+    "@type": "Event",
+    "event_id": "evt_01JC8K2M4N6P8R0T2V4X6Z8B06",
+    "tenant_id": "acme-hospitality",
+    "recovery_event_id": "rec-2026-09-site1",
+    "asset_ids": [
+      "ast_01JC8K2M4N6P8R0T2V4X6Z8A01"
+    ],
+    "event_type": "custody_transferred",
+    "occurred_at": "2026-09-20T16:00:00Z",
+    "recorded_at": "2026-09-20T16:05:00Z",
+    "payload": {
+      "from_party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P09",
+      "to_party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P03",
+      "mode": "signed",
+      "vehicle": "truck-12"
+    },
+    "held": false,
+    "signatures": [
+      {
+        "sig_id": "sig_06a",
+        "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P04",
+        "key_id": "did:key:z6MkokCSMdqFhKi8xDQ8tYdLvBTKqiWrpb1a6TEHx5UQhQtb",
+        "alg": "EdDSA",
+        "signed_hash": "sha256:d9b859d7b037bfb7c3f858e5b97421967972d59895fb99aacea4a432b376b46f",
+        "signed_at": "2026-09-20T16:01:00Z",
+        "role_at_signing": "sender",
+        "signature": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa29rQ1NNZHFGaEtpOHhEUTh0WWRMdkJUS3FpV3JwYjFhNlRFSHg1VVFoUXRiIn0..sKhZTecjQY4V8nPmljM3YXGUahIgfb2QFflo4LLCs7K_M4gu3_s4FGCJH-7rhAsvbHaRQEmOybUd2JqnBqScDw"
+      },
+      {
+        "sig_id": "sig_06b",
+        "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P03",
+        "key_id": "did:key:z6Mkn7XK2aBCMTgPRLvYDYfYXsmi2Dssm2oBHcoYJVcZzLD3",
+        "alg": "EdDSA",
+        "signed_hash": "sha256:d9b859d7b037bfb7c3f858e5b97421967972d59895fb99aacea4a432b376b46f",
+        "signed_at": "2026-09-20T16:02:00Z",
+        "role_at_signing": "receiver",
+        "signature": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa243WEsyYUJDTVRnUFJMdllEWWZZWHNtaTJEc3NtMm9CSGNvWUpWY1p6TEQzIn0..zGdcwoAZyfsfPN9tzBCcLqSgie9YEBb9EfDfHz7PmIBck3M_gZCQc7Js7RzHa-QZUou0vmZYnOJPBEBhGPXrBQ"
+      }
+    ]
+  }
+]

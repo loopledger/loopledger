@@ -66,6 +66,9 @@ importers:
 
   packages/spec:
     dependencies:
+      '@loopledger/ports':
+        specifier: workspace:*
+        version: link:../ports
       ajv:
         specifier: 8.20.0
         version: 8.20.0

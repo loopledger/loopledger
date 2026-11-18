@@ -1,0 +1,51 @@
+[
+  {
+    "@context": [
+      "https://loopledger.org/schema/v0.1/context.jsonld"
+    ],
+    "@type": "Event",
+    "event_id": "evt_01JC8K2M4N6P8R0T2V4X6Z8B01",
+    "tenant_id": "acme-hospitality",
+    "site_id": "SITE1",
+    "asset_ids": [
+      "ast_01JC8K2M4N6P8R0T2V4X6Z8A01"
+    ],
+    "event_type": "asset_born",
+    "occurred_at": "2019-03-14T08:00:00Z",
+    "recorded_at": "2026-02-02T08:00:00Z",
+    "payload": {
+      "source": "procurement",
+      "catalog_ref": {
+        "manufacturer": {
+          "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P08"
+        },
+        "model_reference": "BTH-2S",
+        "article_number": "BTH-2S-G4",
+        "gtin": "09506000134352",
+        "version": 2
+      },
+      "revision": {
+        "basis": "declared",
+        "label": "G4"
+      },
+      "origin": {
+        "site_id": "SITE1",
+        "installed_on": "2019-03-14",
+        "source_event": "evt_01JC8K2M4N6P8R0T2V4X6Z8B01"
+      }
+    },
+    "held": false,
+    "signatures": [
+      {
+        "sig_id": "sig_01",
+        "party_id": "pty_01JC8K2M4N6P8R0T2V4X6Z8P07",
+        "key_id": "did:key:z6MkqLCRrz68dJhmX6oKqcKDB64YT9SmA3tf1LGFu49FBJbs",
+        "alg": "Ed25519",
+        "signed_hash": "sha256:ec419850bc73a189489aca99431a2262905f1d247b81b9a4832074e82786c488",
+        "signed_at": "2026-02-02T08:00:01Z",
+        "role_at_signing": "adapter",
+        "signature": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa3FMQ1JyejY4ZEpobVg2b0txY0tEQjY0WVQ5U21BM3RmMUxHRnU0OUZCSmJzIn0..zkW7l_OmKqPiiLWflt5N_UdOKLqTiNhR_EJ4wJJZ4huRQTqUspk1XNQ-ZOlmVWbP_cS5HG0ZDevTsKNdnXmOBg"
+      }
+    ]
+  }
+]

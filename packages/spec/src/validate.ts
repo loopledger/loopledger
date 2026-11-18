@@ -1,13 +1,21 @@
-// Validates an event against schema/event.schema.json, in Node and in the browser (REQ-SPEC-006).
+// Validates an event against schema/event.schema.json and a passport against schema/passport.schema.json,
+// in Node and in the browser (REQ-SPEC-006, REQ-SPEC-010).
 import Ajv2020 from "ajv/dist/2020.js";
 import type { ValidateFunction } from "ajv/dist/2020.js";
 import addFormats from "ajv-formats";
 import eventSchema from "../schema/event.schema.json" with { type: "json" };
 import passportSchema from "../schema/passport.schema.json" with { type: "json" };
+import type { LedgerMode } from "@loopledger/ports";
 
 export const EVENT_CONTEXT = "https://loopledger.org/schema/v0.1/context.jsonld";
 
 export interface EventValidation {
+  valid: boolean;
+  /** One line per schema violation, `<path> <message>`; empty when valid. */
+  errors: string[];
+}
+
+export interface PassportValidation {
   valid: boolean;
   /** One line per schema violation, `<path> <message>`; empty when valid. */
   errors: string[];
@@ -36,5 +44,28 @@ export const validateEvent = (event: unknown): EventValidation => {
       : event;
   const validate = compiled();
   if (validate(doc)) return { valid: true, errors: [] };
+  return { valid: false, errors: (validate.errors ?? []).map((e) => `${e.instancePath === "" ? "/" : e.instancePath} ${e.message ?? "is invalid"}`) };
+};
+
+let passportCheck: ValidateFunction | undefined;
+
+const passportCompiled = (): ValidateFunction => {
+  if (passportCheck) return passportCheck;
+  const ajv = new Ajv2020({ allErrors: true, strictTypes: false });
+  (addFormats as unknown as (a: Ajv2020) => void)(ajv);
+  ajv.addSchema(eventSchema); // data_grant.signatures references event.schema.json#/$defs/signature
+  passportCheck = ajv.compile(passportSchema);
+  return passportCheck;
+};
+
+/**
+ * Validates a passport against schema/passport.schema.json, in the same `{ valid, errors }` shape as validateEvent,
+ * one `<path> <message>` line per violation. No rule depends on the ledger mode yet — the G1 entry rule (LL-004) adds
+ * the first ones — so the mode is carried as the seam callers already pass.
+ */
+export const validatePassport = (passport: unknown, mode: LedgerMode = "pilot"): PassportValidation => {
+  void mode;
+  const validate = passportCompiled();
+  if (validate(passport)) return { valid: true, errors: [] };
   return { valid: false, errors: (validate.errors ?? []).map((e) => `${e.instancePath === "" ? "/" : e.instancePath} ${e.message ?? "is invalid"}`) };
 };

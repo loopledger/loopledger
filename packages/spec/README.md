@@ -51,6 +51,33 @@ An event, and the passport, export as a W3C VCDM 2.0 credential secured with VC-
 
 The real `did:web` domain and who holds its key are decided after the fiscal host (#9) and before any real signed event.
 
+## Custody transfer
+
+A `custody_transferred` event records one handoff: one or more assets pass from one party to another. Event 6 of
+`examples/booth-2s-g4.events.json` is the worked example; every rule below is one the schema, `src/signers.ts` or the
+ledger already enforces.
+
+1. **Payload.** The payload carries `from_party_id`, `to_party_id` and `mode`. `mode` is `signed` in v0.1; `geofence`
+   is reserved. Optional `vehicle` and `zone` name the truck or area the handoff happened in. The `asset_ids` array may
+   name many assets: one event is one handoff, not one per asset.
+2. **Signers.** The required signers are `sender` and `receiver` (`REQUIRED_SIGNERS` in `src/signers.ts`). Each role is
+   bound to a payload party (`SIGNER_PARTY_FIELDS`): the `sender` signature's `party_id` must equal `from_party_id` and
+   the `receiver` signature's `to_party_id` (REQ-EVENT-014). The two signatures are from distinct parties whatever
+   their keys (REQ-EVENT-015): the same holder signing twice under two keys is still one party.
+3. **Held.** `held` is derived, never stored as signed data: it is true until both roles carry a signature that
+   verifies (REQ-EVENT-004). A held event is absent from projections and is listed as pending for the party whose
+   signature is missing.
+4. **Countersigning.** The second signature arrives as a new signature row over the same signing payload (Signatures,
+   item 3): the rows are order-independent, a party signs an event once, and a third signature is refused.
+5. **Offline.** The second signer can be somewhere with no signal. It needs the full event and the first signature —
+   the signing payload is the event, so nothing else is fetched — signs with its own clock, and syncs later.
+   `signed_at` is the signer's clock and must fall inside the signing key's validity window. `recorded_at` is when the
+   event was created, not when a late signature synced.
+6. **Keys.** Each signer's `key_id` is a `did:key` (Signatures, item 8). The verifier resolves it to a registered key
+   record of the same party and refuses a key registered to another. A `test` key never signs evidence (LL-004).
+7. **Later versions.** `geofence` attestations, a `custody_mismatch` exception when a countersign never arrives, and
+   corrections via `correction_of` are not in v0.1.
+
 ## EPCIS 2.0 export mapping
 
 The exporter is out of scope; this is the mapping it follows (`docs/kickoff/SPEC-data-model.md` §6).
