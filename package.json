@@ -4,6 +4,7 @@
   "type": "module",
   "packageManager": "pnpm@11.13.0",
   "scripts": {
+    "db:migrate": "tsx packages/adapters/postgres/src/migrate.ts",
     "test": "vitest run",
     "typecheck": "tsc",
     "validate": "tsx packages/spec/src/cli.ts"

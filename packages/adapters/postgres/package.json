@@ -1,0 +1,14 @@
+{
+  "name": "@loopledger/adapter-postgres",
+  "version": "0.0.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@loopledger/ports": "workspace:*",
+    "postgres": "^3.4.9"
+  }
+}
