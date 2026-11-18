@@ -4,3 +4,5 @@ node_modules/
 *.tfstate.*
 apps/capture/dist/
 apps/server/dist/
+apps/server/test-results/
+apps/server/playwright-report/
