@@ -3,3 +3,4 @@ node_modules/
 *.tfstate
 *.tfstate.*
 apps/capture/dist/
+apps/server/dist/
