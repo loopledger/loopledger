@@ -9,12 +9,10 @@
     "typecheck": "tsc",
     "validate": "tsx packages/spec/src/cli.ts"
   },
-  "dependencies": {},
   "devDependencies": {
     "@types/node": "^22.20.5",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vitest": "^5.0.5"
-  },
-  "kitBumpedFrom": "0.131.0"
+  }
 }
