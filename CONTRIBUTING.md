@@ -28,9 +28,8 @@ Development is private. Each merge to `main` adds one commit to github.com/loopl
 
 Everything else stays private, including `scripts/` and `docs/requirements/`.
 
-The published root `package.json` leaves out the private `@lemur-labs/kit` dependency and the scripts that run files
-under the private `scripts/`, and its `pnpm-lock.yaml` is regenerated to match, so `pnpm install` works in the public
-tree.
+The published root `package.json` leaves out the scripts that run files under the private `scripts/`, and its
+`pnpm-lock.yaml` is regenerated to match, so `pnpm install` works in the public tree.
 
 ## Contributing from outside
 
@@ -72,6 +71,7 @@ behind. So:
 ```sh
 pnpm typecheck
 pnpm test
-pnpm exec kit workflows
+pnpm validate packages/spec/examples
 pnpm trace
+pnpm check-mirror
 ```
