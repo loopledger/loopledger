@@ -6,7 +6,7 @@ import postgres from "postgres";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { Ledger, signEvent } from "../../../ledger/src/index";
 import type { EventRow, KeyRecord, Passport } from "../../../ports/src/index";
-import { migrate } from "../src/migrate";
+import { MIGRATION_LOCK_KEY, migrate } from "../src/migrate";
 import { PgEventStore, PgEvidenceStore, PgKeyRegistry, PgPassportStore, json } from "../src/index";
 
 const url = process.env.DATABASE_URL;
@@ -143,6 +143,22 @@ database("REQ-PG-002 the migrations are files applied once by pnpm db:migrate", 
     expect(applied).toEqual([]);
     const rows = await sql`select id from schema_migration order by id`;
     expect(rows.map((r) => r.id)).toContain("0001_init.sql");
+  });
+
+  it("waits while another runner holds the migration lock", async () => {
+    const other = postgres(url as string, { max: 1 });
+    let settled = false;
+    let run: Promise<string[]> | undefined;
+    await other.begin(async (tx) => {
+      await tx`select pg_advisory_xact_lock(${MIGRATION_LOCK_KEY})`;
+      run = migrate(sql).finally(() => {
+        settled = true;
+      });
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      expect(settled).toBe(false);
+    });
+    expect(await run).toEqual([]);
+    await other.end();
   });
 });
 

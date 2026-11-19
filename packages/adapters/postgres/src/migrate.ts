@@ -7,21 +7,27 @@ import postgres from "postgres";
 
 const migrationsDir = new URL("../migrations/", import.meta.url);
 
+// Any constant unique to this migrator. Transaction-scoped, so it also holds through a
+// transaction-mode pooler; each file re-checks schema_migration under the lock, so concurrent
+// runners (replicas, a pre-deploy step plus the container start) apply each file once.
+export const MIGRATION_LOCK_KEY = 4_727_001;
+
 export async function migrate(sql: postgres.Sql): Promise<string[]> {
-  await sql`create table if not exists schema_migration (id text primary key, applied_at timestamptz not null default now())`;
-  const done = new Set((await sql`select id from schema_migration`).map((r) => r.id as string));
   const files = readdirSync(migrationsDir)
     .filter((f) => f.endsWith(".sql"))
     .sort();
   const applied: string[] = [];
   for (const file of files) {
-    if (done.has(file)) continue;
-    const statements = readFileSync(new URL(file, migrationsDir), "utf8");
-    await sql.begin(async (tx) => {
-      await tx.unsafe(statements);
+    const ran = await sql.begin(async (tx) => {
+      await tx`select pg_advisory_xact_lock(${MIGRATION_LOCK_KEY})`;
+      await tx`create table if not exists schema_migration (id text primary key, applied_at timestamptz not null default now())`;
+      const [done] = await tx`select 1 from schema_migration where id = ${file}`;
+      if (done) return false;
+      await tx.unsafe(readFileSync(new URL(file, migrationsDir), "utf8"));
       await tx`insert into schema_migration (id) values (${file})`;
+      return true;
     });
-    applied.push(file);
+    if (ran) applied.push(file);
   }
   return applied;
 }
