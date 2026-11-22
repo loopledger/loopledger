@@ -2,12 +2,14 @@
 // real database. They need a live Postgres: set DATABASE_URL (CI sets it to the PR's Neon branch, e.g.
 // `pr-2-ci`). Without it the suite skips, and says why out loud — never silently (REQ-PG-005).
 import { generateKeyPairSync } from "node:crypto";
+import { readdirSync, readFileSync } from "node:fs";
 import postgres from "postgres";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { Ledger, signEvent } from "../../../ledger/src/index";
 import type { EventRow, KeyRecord, Passport } from "../../../ports/src/index";
 import { MIGRATION_LOCK_KEY, migrate } from "../src/migrate";
 import { PgEventStore, PgEvidenceStore, PgKeyRegistry, PgPassportStore, json } from "../src/index";
+import { biProvisionSql, provisionBi } from "../src/provision-bi";
 
 const url = process.env.DATABASE_URL;
 if (!url) console.log("postgres adapter tests skipped: set DATABASE_URL to run them against a real database (CI points them at the PR's Neon branch)");
@@ -238,6 +240,102 @@ database("REQ-PG-005 the behaviour tests run against a real Neon branch, or skip
     expect(await ledger.countersign(handoff.event_id, countersigned)).toEqual({ event_id: handoff.event_id, held: false });
     expect((await ledger.read(TENANT, handoff.event_id)).signatures).toHaveLength(2);
     expect(await ledger.pending(TENANT)).toEqual([]);
+  });
+});
+
+describe("REQ-PG-006 the BI view is provisioned on staging only, never by a migration", () => {
+  it("refuses any environment but staging and does nothing without the gate", async () => {
+    expect(() => biProvisionSql("production")).toThrow(/must be one of staging, got "production"/);
+    expect(() => biProvisionSql("staging'; drop table event; --")).toThrow(/must be one of staging/);
+    expect(biProvisionSql("staging")).toContain("'staging'::text");
+    expect(await provisionBi(undefined as unknown as postgres.Sql, {})).toBe(false);
+  });
+
+  it("keeps the view and its roles out of every migration file", () => {
+    const dir = new URL("../migrations/", import.meta.url);
+    for (const f of readdirSync(dir).filter((n) => n.endsWith(".sql"))) {
+      expect(readFileSync(new URL(f, dir), "utf8")).not.toMatch(/bi_product_events|loopledger_bi|bi_pseudonym_key/);
+    }
+  });
+});
+
+database("REQ-PG-006 the factory reads daily-countable events through bi_product_events only", () => {
+  const OTHER = "pilot-lakeside";
+  beforeAll(async () => {
+    expect(await provisionBi(sql, { LOOPLEDGER_PROVISION_BI: "staging" })).toBe(true);
+  });
+  // A direct (non-pooler) client, as for loopledger_app, so `set role` holds for the session.
+  const asBi = async <T>(fn: (bi: postgres.Sql) => Promise<T>): Promise<T> => {
+    const bi = postgres((url as string).replace("-pooler", ""), { max: 1 });
+    try {
+      await bi.unsafe("set role loopledger_bi");
+      return await fn(bi);
+    } finally {
+      await bi.end();
+    }
+  };
+
+  it("exposes each event with a keyed tenant subject, ledger time and no payload", async () => {
+    const events = new PgEventStore(sql, "pilot");
+    await events.append(event(1));
+    await events.append(event(2, { event_type: "weighed", recorded_at: "2026-11-14T09:00:00Z" }));
+    await events.append(event(3, { tenant_id: OTHER }));
+    const rows = await asBi((bi) => bi`select kind, occurred_at, dedupe_key, subject, test_account, settings_on, env, payload
+                                         from bi_product_events order by dedupe_key`);
+    expect(rows.map((r) => [r.kind, r.dedupe_key, (r.occurred_at as Date).toISOString()])).toEqual([
+      ["custody_transferred", evt(1), "2026-11-13T08:00:05.000Z"],
+      ["weighed", evt(2), "2026-11-14T09:00:00.000Z"],
+      ["custody_transferred", evt(3), "2026-11-13T08:00:05.000Z"],
+    ]);
+    for (const r of rows) {
+      expect(r.subject).toMatch(/^[0-9a-f]{64}$/);
+      expect(r).toMatchObject({ test_account: true, settings_on: [], env: "staging", payload: {} });
+    }
+    expect(rows[0]!.subject).toBe(rows[1]!.subject);
+    expect(rows[0]!.subject).not.toBe(rows[2]!.subject);
+    const [plain] = await sql`select encode(sha256(convert_to(${TENANT}, 'UTF8')), 'hex') as h`;
+    expect(rows[0]!.subject).not.toBe(plain!.h);
+
+    await provisionBi(sql, { LOOPLEDGER_PROVISION_BI: "staging" });
+    const again = await asBi((bi) => bi`select subject from bi_product_events where dedupe_key = ${evt(1)}`);
+    expect(again[0]!.subject).toBe(rows[0]!.subject);
+  });
+
+  it("gives a row whose recorded_at is not an ISO timestamp no occurred_at, instead of breaking the view", async () => {
+    for (const [n, recorded] of [[4, "now"], [5, "2026-13-40T00:00:00Z"], [6, "13 Nov 2026"]] as const) {
+      const row = { ...event(n), recorded_at: recorded };
+      await sql`insert into event (event_id, tenant_id, event_type, row)
+                values (${row.event_id}, ${TENANT}, ${row.event_type}, ${json(sql, row)})`;
+    }
+    await new PgEventStore(sql, "pilot").append(event(7));
+    const rows = await asBi((bi) => bi`select dedupe_key, occurred_at from bi_product_events order by dedupe_key`);
+    expect(rows.map((r) => [r.dedupe_key, r.occurred_at === null])).toEqual([
+      [evt(4), true], [evt(5), true], [evt(6), true], [evt(7), false],
+    ]);
+  });
+
+  it("refuses the BI role every table, the key included", async () => {
+    for (const table of ["event", "signature", "evidence", "key", "passport", "party", "bi_pseudonym_key"]) {
+      await expect(asBi((bi) => bi.unsafe(`select 1 from ${table} limit 1`))).rejects.toThrow(/permission denied/);
+    }
+    await expect(sql`select 1 from bi_pseudonym_key`.then(() => "owner reads")).resolves.toBe("owner reads");
+    expect(await sql`select has_table_privilege('loopledger_app', 'bi_pseudonym_key', 'SELECT') as allowed`)
+      .toEqual([{ allowed: false }]);
+  }, 30_000);
+
+  it("grants the BI role SELECT on the view and nothing else, and its login only membership", async () => {
+    const grants = await sql`select c.relname, a.privilege_type
+                               from pg_class c cross join lateral aclexplode(c.relacl) a
+                              where a.grantee in ('loopledger_bi'::regrole, 'loopledger_bi_login'::regrole)
+                              order by 1, 2`;
+    expect(grants.map((g) => [g.relname, g.privilege_type])).toEqual([["bi_product_events", "SELECT"]]);
+    const roles = await sql`select rolname, rolcanlogin, rolsuper, rolcreaterole, rolbypassrls,
+                                   pg_has_role(rolname, 'loopledger_bi', 'MEMBER') as member
+                              from pg_roles where rolname in ('loopledger_bi', 'loopledger_bi_login') order by 1`;
+    expect(roles).toEqual([
+      { rolname: "loopledger_bi", rolcanlogin: false, rolsuper: false, rolcreaterole: false, rolbypassrls: false, member: true },
+      { rolname: "loopledger_bi_login", rolcanlogin: true, rolsuper: false, rolcreaterole: false, rolbypassrls: false, member: true },
+    ]);
   });
 });
 

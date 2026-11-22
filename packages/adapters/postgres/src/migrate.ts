@@ -4,6 +4,7 @@
 // a no-op.
 import { readdirSync, readFileSync } from "node:fs";
 import postgres from "postgres";
+import { PROVISION_BI, provisionBi } from "./provision-bi";
 
 const migrationsDir = new URL("../migrations/", import.meta.url);
 
@@ -42,5 +43,6 @@ if (process.argv[1]?.endsWith("migrate.ts")) {
   const applied = await migrate(sql);
   if (applied.length === 0) console.log("db:migrate: migrations are up to date");
   for (const file of applied) console.log(`db:migrate: applied ${file}`);
+  if (await provisionBi(sql)) console.log(`db:migrate: provisioned the BI view for ${process.env[PROVISION_BI]}`);
   await sql.end();
 }
