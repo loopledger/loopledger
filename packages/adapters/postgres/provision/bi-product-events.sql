@@ -32,6 +32,7 @@ $fn$;
 -- explicitly because CREATE OR REPLACE keeps an earlier ACL.
 grant execute on function bi_iso_timestamp(text) to public;
 
+-- create or replace can only append columns: renaming, retyping or dropping one needs a drop view first.
 create or replace view bi_product_events as
   select e.event_type                                                      as kind,
          bi_iso_timestamp(e.row ->> 'recorded_at')                         as occurred_at,
@@ -58,7 +59,9 @@ grant usage on schema public to loopledger_bi;
 grant select on bi_product_events to loopledger_bi;
 grant loopledger_bi to current_user;
 
--- Anything either role holds beyond SELECT on the view, or the login's membership in the BI role, fails the boot.
+-- Anything either role holds beyond SELECT on the view, USAGE on schema public and the login's membership in the BI
+-- role fails the boot: an elevated attribute, a grant, an ownership or a default privilege. Members of the BI role (the
+-- owner, by the grant above) are not checked.
 do $$
 declare
   bi constant regrole := 'loopledger_bi'::regrole;
@@ -71,7 +74,7 @@ begin
       join pg_namespace n on n.oid = c.relnamespace
       cross join lateral aclexplode(c.relacl) a
      where a.grantee in (bi, bi_login)
-       and not (n.nspname = 'public' and c.relname = 'bi_product_events' and a.privilege_type = 'SELECT' and a.grantee = bi)
+       and not (n.nspname = 'public' and c.relname = 'bi_product_events' and a.privilege_type = 'SELECT' and a.grantee = bi and not a.is_grantable)
     union all
     select format('%s on %I.%I(%I) to %s', a.privilege_type, n.nspname, c.relname, att.attname, a.grantee::regrole)
       from pg_attribute att
@@ -89,8 +92,54 @@ begin
       from pg_auth_members m
      where m.member in (bi, bi_login)
        and not (m.member = bi_login and m.roleid = bi)
+    union all
+    select format('%s has %s', r.rolname, v.attr)
+      from pg_roles r
+      cross join lateral (values ('superuser', r.rolsuper), ('createdb', r.rolcreatedb), ('createrole', r.rolcreaterole),
+                                 ('bypassrls', r.rolbypassrls), ('replication', r.rolreplication),
+                                 ('login', r.oid = bi and r.rolcanlogin), ('nologin', r.oid = bi_login and not r.rolcanlogin)) v(attr, held)
+     where r.oid in (bi, bi_login) and v.held
+    union all
+    select format('%s on schema %I to %s', a.privilege_type, n.nspname, a.grantee::regrole)
+      from pg_namespace n
+      cross join lateral aclexplode(n.nspacl) a
+     where a.grantee in (bi, bi_login)
+       and not (n.nspname = 'public' and a.privilege_type = 'USAGE' and a.grantee = bi and not a.is_grantable)
+    union all
+    select format('%s on database %I to %s', a.privilege_type, d.datname, a.grantee::regrole)
+      from pg_database d
+      cross join lateral aclexplode(d.datacl) a
+     where a.grantee in (bi, bi_login)
+    union all
+    select format('%s on type %s to %s', a.privilege_type, t.oid::regtype, a.grantee::regrole)
+      from pg_type t
+      cross join lateral aclexplode(t.typacl) a
+     where a.grantee in (bi, bi_login)
+    union all
+    select format('%s on large object %s to %s', a.privilege_type, l.oid, a.grantee::regrole)
+      from pg_largeobject_metadata l
+      cross join lateral aclexplode(l.lomacl) a
+     where a.grantee in (bi, bi_login)
+    union all
+    select format('%s owns relation %I.%I', c.relowner::regrole, n.nspname, c.relname)
+      from pg_class c join pg_namespace n on n.oid = c.relnamespace where c.relowner in (bi, bi_login)
+    union all
+    select format('%s owns schema %I', n.nspowner::regrole, n.nspname) from pg_namespace n where n.nspowner in (bi, bi_login)
+    union all
+    select format('%s owns type %s', t.typowner::regrole, t.oid::regtype) from pg_type t where t.typowner in (bi, bi_login)
+    union all
+    select format('%s owns function %s', p.proowner::regrole, p.oid::regprocedure) from pg_proc p where p.proowner in (bi, bi_login)
+    union all
+    select format('%s owns database %I', d.datdba::regrole, d.datname) from pg_database d where d.datdba in (bi, bi_login)
+    union all
+    select format('%s owns large object %s', l.lomowner::regrole, l.oid) from pg_largeobject_metadata l where l.lomowner in (bi, bi_login)
+    union all
+    select format('default %s on %s for %s to %s', a.privilege_type, d.defaclobjtype, d.defaclrole::regrole, a.grantee::regrole)
+      from pg_default_acl d
+      cross join lateral aclexplode(d.defaclacl) a
+     where d.defaclrole in (bi, bi_login) or a.grantee in (bi, bi_login)
   ) x;
   if extra is not null then
-    raise exception 'BI roles hold grants beyond bi_product_events: %', extra;
+    raise exception 'BI roles hold privileges beyond bi_product_events: %', extra;
   end if;
 end $$;

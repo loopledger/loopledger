@@ -337,6 +337,34 @@ database("REQ-PG-006 the factory reads daily-countable events through bi_product
       { rolname: "loopledger_bi_login", rolcanlogin: true, rolsuper: false, rolcreaterole: false, rolbypassrls: false, member: true },
     ]);
   });
+
+  // Each drift runs with the provisioning SQL in one transaction that rolls back, so the other test files sharing
+  // this database never see it.
+  const drifts = [
+    { name: "LOGIN on the BI role", apply: "alter role loopledger_bi login", reason: /loopledger_bi has login/ },
+    { name: "CREATE on schema public", apply: "grant create on schema public to loopledger_bi",
+      reason: /CREATE on schema public to loopledger_bi/ },
+    { name: "a database grant", apply: "do $$ begin execute format('grant temporary on database %I to loopledger_bi_login', current_database()); end $$",
+      reason: /TEMPORARY on database \S+ to loopledger_bi_login/ },
+    { name: "the BI role owning a table",
+      apply: "grant create on schema public to loopledger_bi; create table bi_probe_owned (id int); alter table bi_probe_owned owner to loopledger_bi; revoke create on schema public from loopledger_bi",
+      reason: /loopledger_bi owns relation public\.bi_probe_owned/ },
+    { name: "a default privilege for the BI role", apply: "alter default privileges in schema public grant select on tables to loopledger_bi",
+      reason: /default SELECT on r for \S+ to loopledger_bi/ },
+  ];
+  for (const drift of drifts) {
+    it(`fails provisioning on ${drift.name}`, async () => {
+      const refused = await sql
+        .begin(async (tx) => {
+          await tx.unsafe(drift.apply);
+          await tx.unsafe(biProvisionSql("staging"));
+        })
+        .then(() => "provisioned", (e: Error) => e.message);
+      expect(refused).toMatch(/^BI roles hold privileges beyond bi_product_events: /);
+      expect(refused).toMatch(drift.reason);
+      expect(await provisionBi(sql, { LOOPLEDGER_PROVISION_BI: "staging" })).toBe(true);
+    }, 30_000);
+  }
 });
 
 /** The plain signature row the store-level cases append (its JWS is not verified at the store level). */
