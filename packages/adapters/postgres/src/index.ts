@@ -134,3 +134,5 @@ export class PgPassportStore implements PassportStore {
     return rows.map((r) => r.row as Passport);
   }
 }
+
+export { assertRestrictedRuntime, runtimeRoleGated } from "./runtime-role";
