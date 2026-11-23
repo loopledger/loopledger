@@ -29,9 +29,11 @@ $role$;
 
 -- Converge, then grant exactly what apps/server's routes reach through src/index.ts: appends and reads on the log, its
 -- signatures, keys and passports (bigserial ids, so USAGE on their sequences; ON CONFLICT DO NOTHING and RETURNING read
--- columns, covered by SELECT), reads of the migration-seeded parties, and reads of evidence (Ledger.append checks each
--- event's evidence refs are stored). No route stores evidence, and nothing updates or deletes (REQ-PG-004).
-REVOKE ALL ON TABLE event, signature, evidence, key, passport, party, schema_migration FROM loopledger_app_login;
+-- columns, covered by SELECT), reads of the migration-seeded parties, reads of evidence (Ledger.append checks each
+-- event's evidence refs are stored), and the feedback_submission table (REQ-SERVER-012): insert and read the submission,
+-- update it when the intake accepts the event (intake_sent/receipt_url) and when the retention sweep clears the raw
+-- text — a uuid primary key, so no sequence. No route stores evidence, and nothing deletes (REQ-PG-004).
+REVOKE ALL ON TABLE event, signature, evidence, key, passport, party, schema_migration, feedback_submission FROM loopledger_app_login;
 REVOKE ALL ON SEQUENCE event_seq_seq, signature_seq_seq, key_seq_seq, passport_seq_seq, party_seq_seq
   FROM loopledger_app_login;
 DO $converge$
@@ -49,6 +51,7 @@ $converge$;
 GRANT USAGE ON SCHEMA public TO loopledger_app_login;
 GRANT SELECT, INSERT ON TABLE event, signature, key, passport TO loopledger_app_login;
 GRANT SELECT ON TABLE party, evidence TO loopledger_app_login;
+GRANT SELECT, INSERT, UPDATE ON TABLE feedback_submission TO loopledger_app_login;
 GRANT USAGE ON SEQUENCE event_seq_seq, signature_seq_seq, key_seq_seq, passport_seq_seq TO loopledger_app_login;
 
 -- Any privilege beyond the grants above fails the boot: on relations (direct, or to PUBLIC in any user schema),
@@ -71,7 +74,8 @@ BEGIN
     ('key', 'SELECT'), ('key', 'INSERT'), ('key_seq_seq', 'USAGE'),
     ('passport', 'SELECT'), ('passport', 'INSERT'), ('passport_seq_seq', 'USAGE'),
     ('party', 'SELECT'),
-    ('evidence', 'SELECT')
+    ('evidence', 'SELECT'),
+    ('feedback_submission', 'SELECT'), ('feedback_submission', 'INSERT'), ('feedback_submission', 'UPDATE')
   ),
   extension_member AS (
     SELECT classid, objid FROM pg_depend WHERE deptype = 'e'
